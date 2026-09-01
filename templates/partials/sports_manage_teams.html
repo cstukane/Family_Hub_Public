@@ -1,0 +1,12 @@
+<div class="sports-manage-teams">
+  <h3>Manage Favorite Teams</h3>
+  {% if current_favorite_teams %}
+    <ul>
+      {% for team in current_favorite_teams %}
+        <li>{{ team }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No favorite teams selected.</p>
+  {% endif %}
+</div>

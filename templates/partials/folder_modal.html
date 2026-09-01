@@ -1,0 +1,42 @@
+<div id="folder-modal" class="modal" role="dialog" aria-labelledby="folder-modal-title" aria-modal="true" data-modal-init="initFolderModal">
+    <div class="modal-content" role="document">
+        <div class="modal-header">
+            <h2 id="folder-modal-title">Apps</h2>
+            <button type="button" class="modal-close" data-action="close-modal" aria-label="Close modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="folder-app-grid">
+                {% if config.local_apps %}
+                    {% for app in config.local_apps %}
+                        {% set is_media_child = (app.action in ['open_iframe', 'open_tab']) and app.url %}
+                        <button class="folder-app-btn app-bar-btn"
+                                {% if not is_media_child %}
+                                hx-post="/api/launch"
+                                hx-vals='{"app_id": "{{ app.id }}"}'
+                                hx-target="#main-content"
+                                hx-swap="innerHTML"
+                                {% endif %}
+                                data-app-id="{{ app.id }}"
+                                data-app-action="{{ app.action }}"
+                                {% if app.url %}data-app-url="{{ app.url }}"{% endif %}
+                                {% if is_media_child %}data-media-launch="child"{% endif %}
+                                onclick="this.closest('.modal').classList.remove('show'); setTimeout(() => this.closest('.modal').remove(), 300);"
+                                title="{{ app.label }}">
+                            <span class="app-bar-btn-icon folder-app-icon">
+                                {% if app.icon %}
+                                    <img src="{{ url_for('static', filename='img/' + app.icon) }}" alt="{{ app.label }}" onerror="handleMissingIcon(this);">
+                                {% else %}
+                                    <span class="icon-placeholder">{{ app.label|first|upper }}</span>
+                                {% endif %}
+                            </span>
+                            <span class="app-bar-btn-label folder-app-label">{{ app.label }}</span>
+                        </button>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No local applications configured.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ config.ui.theme if config and config.ui.theme else 'auto' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Diagnostics - Kitchen Hub</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <script src="https://unpkg.com/htmx.org@1.8.4"></script>
+    <style>
+        .admin-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            grid-template-rows: auto 1fr;
+            min-height: 100vh;
+        }
+        .admin-sidebar {
+            grid-column: 1 / 2;
+            grid-row: 2 / 3;
+            background-color: var(--surface-color);
+            border-right: 1px solid var(--border-color);
+            padding: 1rem;
+        }
+        .admin-content {
+            grid-column: 2 / 3;
+            grid-row: 2 / 3;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        .admin-header {
+            grid-column: 1 / -1;
+            grid-row: 1 / 2;
+            background-color: var(--surface-color);
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .admin-nav { list-style: none; padding: 0; margin: 0; }
+        .admin-nav li { margin-bottom: 0.5rem; }
+        .admin-nav a {
+            display: block; padding: 0.75rem; text-decoration: none;
+            color: var(--text-color); border-radius: var(--border-radius);
+            transition: background-color 0.2s;
+        }
+        .admin-nav a:hover, .admin-nav a.active {
+            background-color: color-mix(in srgb, var(--primary-color) 20%, transparent);
+        }
+        .admin-logout { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color); }
+        .admin-panel-title { margin-bottom: 1.5rem; color: var(--text-color); }
+        .admin-card {
+            background: var(--background-color); border: 1px solid var(--border-color);
+            border-radius: var(--border-radius); padding: 1.5rem; margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+        .admin-card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1rem; padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .admin-card-title { margin: 0; font-size: var(--font-size-large); }
+        .diagnostics-actions { margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+        .diagnostic-item { padding: 1rem; border-bottom: 1px solid var(--border-color); }
+        .diagnostic-item:last-child { border-bottom: none; }
+        .admin-btn {
+            display: inline-block; padding: 0.5rem 1rem;
+            background-color: var(--primary-color); color: white;
+            text-decoration: none; border-radius: var(--border-radius);
+            border: none; cursor: pointer; font-size: 0.9rem;
+        }
+        .admin-btn:hover { opacity: 0.9; }
+        .admin-btn-danger { background-color: var(--error-color); }
+        .admin-btn-success { background-color: var(--success-color); }
+        .loading { text-align: center; padding: 2rem; color: var(--text-color); }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <header class="admin-header">
+            <h1>Kitchen Hub Admin Panel</h1>
+            <button id="logoutBtn" class="admin-btn admin-btn-danger">Logout</button>
+        </header>
+        <aside class="admin-sidebar">
+            <ul class="admin-nav">
+                <li><a href="/admin">Dashboard</a></li>
+                <li><a href="/admin/config">Configuration</a></li>
+                <li><a href="/admin/system">System Info</a></li>
+                <li><a href="/admin/diagnostics" class="active">Diagnostics</a></li>
+                <li><a href="/admin/backup">Backups</a></li>
+                <li><a href="/admin/updates">Updates</a></li>
+                <li><a href="/">← Back to Dashboard</a></li>
+            </ul>
+            <div class="admin-logout">
+                <button id="logoutBtnSidebar" class="admin-btn admin-btn-danger btn-block">Logout</button>
+            </div>
+        </aside>
+        <main class="admin-content">
+            <h2 class="admin-panel-title">Diagnostics</h2>
+            <div class="diagnostics-actions">
+                <button id="runDiagnostics" class="admin-btn admin-btn-success">Run Diagnostics</button>
+            </div>
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h3 class="admin-card-title">Diagnostics Results</h3>
+                </div>
+                <div id="detailedDiagnostics">
+                    <p>Click "Run Diagnostics" to check system components.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script>
+        function logout() {
+            fetch('/api/admin/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+            .then(function(r) { return r.json(); })
+            .then(function() { window.location.href = '/admin/login'; })
+            .catch(function() { window.location.href = '/admin/login'; });
+        }
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+        document.getElementById('logoutBtnSidebar').addEventListener('click', logout);
+        document.getElementById('runDiagnostics').addEventListener('click', function() {
+            document.getElementById('detailedDiagnostics').innerHTML = '<div class="loading">Running diagnostics...</div>';
+            fetch('/api/admin/diagnostics')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var html = '<ul>';
+                    var checks = data.checks || {};
+                    Object.keys(checks).forEach(function(check) {
+                        var result = checks[check];
+                        html += '<li class="diagnostic-item"><strong>' + check + ':</strong> ' + result.status + '<div>' + result.message + '</div></li>';
+                    });
+                    html += '</ul>';
+                    document.getElementById('detailedDiagnostics').innerHTML = html;
+                })
+                .catch(function(e) {
+                    document.getElementById('detailedDiagnostics').innerHTML = '<p>Error running diagnostics: ' + e + '</p>';
+                });
+        });
+    </script>
+</body>
+</html>

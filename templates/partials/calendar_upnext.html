@@ -1,0 +1,44 @@
+<ul class="upnext-list" role="list" aria-label="Upcoming events">
+{% if events %}
+    {% for event in events %}
+        {% set ns = namespace(owner_color=None) %}
+        {% set ev_owner = event.owner | string if event.owner else '' %}
+        {% if config and config.family %}
+            {% for member in config.family %}
+                {% if member.name == ev_owner or (ev_owner and member.emails and ev_owner in member.emails) %}
+                    {% set ns.owner_color = member.color %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+        {% set owner_color = ns.owner_color %}
+
+
+        {% set event_local = event.starts_at | convert_to_timezone if event.starts_at else None %}
+        {% set event_time = event_local | time_12hour if event_local else '' %}
+        {% set day_diff = (event_local.date() - current_date).days if (event_local and current_date) else None %}
+        {% set is_today = (day_diff == 0) %}
+        {% set is_tomorrow = (day_diff == 1) %}
+        {% set is_now = (is_today and event.starts_at and event.ends_at and event.starts_at <= now <= event.ends_at) %}
+        {% if is_now and now %}
+            {% set part_of_day = 'Morning' if now.hour < 12 else ('Afternoon' if now.hour < 17 else 'Evening') %}
+        {% endif %}
+        {% set date_label = ('Tomorrow' if is_tomorrow else event_local.strftime('%a')) if (event_local and not is_today) else None %}
+
+        <li class="upnext-item" role="listitem" style="{{ '--owner-color: ' ~ owner_color ~ ';' if owner_color else '' }}">
+            <span class="upnext-time">
+                {% if is_now %}
+                    <span class="upnext-now">Now &mdash; {{ part_of_day }}</span>
+                {% else %}
+                    {{ event_time }}
+                {% endif %}
+            </span>
+            <span class="upnext-title">{{ event.title }}</span>
+            {% if date_label %}
+                <span class="upnext-date-badge">{{ date_label }}</span>
+            {% endif %}
+        </li>
+    {% endfor %}
+{% else %}
+    <li class="upnext-item upnext-empty">No upcoming events</li>
+{% endif %}
+</ul>

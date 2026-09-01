@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ config.ui.theme if config and config.ui.theme else 'auto' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Backups - Kitchen Hub</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <script src="https://unpkg.com/htmx.org@1.8.4"></script>
+    <style>
+        .admin-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            grid-template-rows: auto 1fr;
+            min-height: 100vh;
+        }
+        
+        .admin-sidebar {
+            grid-column: 1 / 2;
+            grid-row: 2 / 3;
+            background-color: var(--surface-color);
+            border-right: 1px solid var(--border-color);
+            padding: 1rem;
+        }
+        
+        .admin-content {
+            grid-column: 2 / 3;
+            grid-row: 2 / 3;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        
+        .admin-header {
+            grid-column: 1 / -1;
+            grid-row: 1 / 2;
+            background-color: var(--surface-color);
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .admin-nav {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .admin-nav li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .admin-nav a {
+            display: block;
+            padding: 0.75rem;
+            text-decoration: none;
+            color: var(--text-color);
+            border-radius: var(--border-radius);
+            transition: background-color 0.2s;
+        }
+        
+        .admin-nav a:hover {
+            background-color: color-mix(in srgb, var(--primary-color) 20%, transparent);
+        }
+        
+        .admin-nav a.active {
+            background-color: color-mix(in srgb, var(--primary-color) 30%, transparent);
+        }
+        
+        .admin-logout {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .admin-panel-title {
+            margin-bottom: 1.5rem;
+            color: var(--text-color);
+        }
+        
+        .admin-card {
+            background: var(--background-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+        
+        .admin-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .admin-card-title {
+            margin: 0;
+            font-size: var(--font-size-large);
+        }
+        
+        .backup-actions {
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .backup-item {
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            margin-bottom: 1rem;
+            background-color: var(--surface-color);
+        }
+        
+        .backup-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .backup-item-title {
+            font-weight: bold;
+            color: var(--text-color);
+        }
+        
+        .backup-item-meta {
+            font-size: 0.9rem;
+            color: var(--text-color);
+            opacity: 0.8;
+        }
+        
+        .backup-item-actions {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .admin-btn {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: var(--border-radius);
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .admin-btn:hover {
+            opacity: 0.9;
+        }
+        
+        .admin-btn-danger {
+            background-color: var(--error-color);
+        }
+        
+        .admin-btn-success {
+            background-color: var(--success-color);
+        }
+        
+        .admin-btn-info {
+            background-color: var(--info-color);
+        }
+        
+        .backup-details {
+            margin-top: 1rem;
+            padding: 0.5rem;
+            background-color: var(--background-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .backup-details pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-color);
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 1rem;
+        }
+        
+        .alert-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .alert-error {
+            background-color: var(--error-color);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Admin header -->
+        <header class="admin-header">
+            <h1>Kitchen Hub Admin Panel</h1>
+            <button id="logoutBtn" class="admin-btn admin-btn-danger">Logout</button>
+        </header>
+        
+        <!-- Admin sidebar -->
+        <aside class="admin-sidebar">
+            <ul class="admin-nav">
+                <li><a href="/admin">Dashboard</a></li>
+                <li><a href="/admin/config">Configuration</a></li>
+                <li><a href="/admin/system">System Info</a></li>
+                <li><a href="/admin/diagnostics">Diagnostics</a></li>
+                <li><a href="/admin/backup" class="active">Backups</a></li>
+                <li><a href="/admin/updates">Updates</a></li>
+                <li><a href="/">← Back to Dashboard</a></li>
+            </ul>
+            
+            <div class="admin-logout">
+                <button id="logoutBtnSidebar" class="admin-btn admin-btn-danger btn-block">Logout</button>
+            </div>
+        </aside>
+        
+        <!-- Admin content -->
+        <main class="admin-content">
+            <h2 class="admin-panel-title">Backup Management</h2>
+            
+            <div id="alertMessage" class="alert" style="display: none;"></div>
+            
+            <div class="backup-actions">
+                <button id="createBackupBtn" class="admin-btn admin-btn-success">Create New Backup</button>
+                <button id="refreshBackupsBtn" class="admin-btn admin-btn-info">Refresh List</button>
+            </div>
+            
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h3 class="admin-card-title">Available Backups</h3>
+                </div>
+                <div id="backupsList">
+                    <div class="loading">Loading backups...</div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        // Logout functionality
+        function logout() {
+            fetch('/api/admin/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                window.location.href = '/admin/login';
+            })
+            .catch(error => {
+                console.error('Logout error:', error);
+                window.location.href = '/admin/login';
+            });
+        }
+        
+        // Add event listeners to logout buttons
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+        document.getElementById('logoutBtnSidebar').addEventListener('click', logout);
+        
+        // Create backup
+        document.getElementById('createBackupBtn').addEventListener('click', function() {
+            const backupName = prompt('Enter backup name (optional):');
+            fetch('/api/admin/backup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: backupName || null })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showNotification('Backup created successfully: ' + data.path, 'success');
+                    loadBackupsList();
+                } else {
+                    showNotification('Error creating backup: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Backup creation error:', error);
+                showNotification('Error creating backup', 'error');
+            });
+        });
+        
+        // Refresh backups list
+        document.getElementById('refreshBackupsBtn').addEventListener('click', function() {
+            loadBackupsList();
+        });
+        
+        // Load backups list
+        function loadBackupsList() {
+            document.getElementById('backupsList').innerHTML = '<div class="loading">Loading backups...</div>';
+            
+            fetch('/api/admin/backup')
+                .then(response => response.json())
+                .then(data => {
+                    displayBackupsList(data);
+                })
+                .catch(error => {
+                    console.error('Load backups error:', error);
+                    document.getElementById('backupsList').innerHTML = 
+                        '<p class="alert alert-error">Error loading backups: ' + error + '</p>';
+                });
+        }
+        
+        // Display backups list
+        function displayBackupsList(backups) {
+            let html = '';
+            
+            if (backups.length === 0) {
+                html = '<p>No backups found.</p>';
+            } else {
+                backups.forEach(backup => {
+                    const sizeInMB = (backup.size / (1024 * 1024)).toFixed(2);
+                    html += `
+                        <div class="backup-item">
+                            <div class="backup-item-header">
+                                <div class="backup-item-title">${backup.name}</div>
+                                <div class="backup-item-meta">Size: ${sizeInMB} MB | Modified: ${backup.modified}</div>
+                            </div>
+                            <div class="backup-item-actions">
+                                <button class="admin-btn admin-btn-info" onclick="showBackupDetails('${backup.name}')">Details</button>
+                                <button class="admin-btn admin-btn-success" onclick="restoreBackup('${backup.name}')">Restore</button>
+                                <button class="admin-btn admin-btn-warning" onclick="downloadBackup('${backup.name}')">Download</button>
+                                <button class="admin-btn admin-btn-danger" onclick="deleteBackup('${backup.name}')">Delete</button>
+                            </div>
+                            <div id="details-${backup.name}" class="backup-details" style="display: none;"></div>
+                        </div>
+                    `;
+                });
+            }
+            
+            document.getElementById('backupsList').innerHTML = html;
+        }
+        
+        // Show backup details
+        function showBackupDetails(backupName) {
+            const detailsElement = document.getElementById(`details-${backupName}`);
+            const isVisible = detailsElement.style.display !== 'none';
+            
+            if (isVisible) {
+                detailsElement.style.display = 'none';
+            } else {
+                fetch(`/api/admin/backup/${backupName}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.contents) {
+                            let contentsHtml = '<h4>Contents:</h4><ul>';
+                            data.contents.forEach(item => {
+                                contentsHtml += `<li><strong>${item.name}</strong> (${item.type}, ${item.size} bytes)</li>`;
+                            });
+                            contentsHtml += '</ul>';
+                            detailsElement.innerHTML = contentsHtml;
+                            detailsElement.style.display = 'block';
+                        } else {
+                            detailsElement.innerHTML = '<p>Could not load backup details.</p>';
+                            detailsElement.style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Load backup details error:', error);
+                        detailsElement.innerHTML = '<p>Error loading backup details.</p>';
+                        detailsElement.style.display = 'block';
+                    });
+            }
+        }
+        
+        // Restore backup
+        function restoreBackup(backupName) {
+            if (confirm(`Are you sure you want to restore from backup "${backupName}"? This will overwrite current data.`)) {
+                fetch(`/api/admin/restore/${backupName}`, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            showNotification('Backup restored successfully. The application may need to be restarted.', 'success');
+                        } else {
+                            showNotification('Error restoring backup: ' + data.message, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Restore backup error:', error);
+                        showNotification('Error restoring backup', 'error');
+                    });
+            }
+        }
+        
+        // Download backup
+        function downloadBackup(backupName) {
+            // Create a temporary link to initiate download
+            const link = document.createElement('a');
+            link.href = `/api/admin/backup/${backupName}/download`; // This would need to be implemented
+            link.download = backupName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showNotification('Note: Direct download not implemented. Access the backup file directly from the server.', 'info');
+        }
+        
+        // Delete backup
+        function deleteBackup(backupName) {
+            if (confirm(`Are you sure you want to delete backup "${backupName}"? This cannot be undone.`)) {
+                fetch(`/api/admin/backup/${backupName}`, { method: 'DELETE' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success' || data.status === 'success') {
+                            showNotification('Backup deleted successfully', 'success');
+                            loadBackupsList();
+                        } else {
+                            showNotification('Error deleting backup: ' + (data.message || 'Unknown error'), 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Delete backup error:', error);
+                        showNotification('Error deleting backup', 'error');
+                    });
+            }
+        }
+        
+        // Show notification
+        function showNotification(message, type) {
+            const alertElement = document.getElementById('alertMessage');
+            alertElement.textContent = message;
+            alertElement.className = `alert alert-${type}`;
+            alertElement.style.display = 'block';
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                alertElement.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Load the backups list when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBackupsList();
+        });
+    </script>
+</body>
+</html>

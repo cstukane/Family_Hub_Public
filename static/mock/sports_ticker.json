@@ -1,0 +1,243 @@
+{
+  "updated_at": "2024-01-15T14:30:00+00:00",
+  "meta": {
+    "timezone": "America/New_York",
+    "cache_age_seconds": 120,
+    "stale": false,
+    "favorites": ["NYY", "BOS", "LAL", "GSW"],
+    "source": "espn-scoreboard-v1",
+    "fetch_error_reason": null
+  },
+  "games": [
+    {
+      "id": "401234567",
+      "league": "NBA",
+      "status": "in_progress",
+      "start_time": "2024-01-15T19:30:00-05:00",
+      "start_time_utc": "2024-01-16T00:30:00+00:00",
+      "time_remaining": "8:42",
+      "quarter": "Q3",
+      "home_team": {
+        "name": "New York Knicks",
+        "abbreviation": "NYK",
+        "score": 89
+      },
+      "away_team": {
+        "name": "Boston Celtics",
+        "abbreviation": "BOS",
+        "score": 84
+      },
+      "home_score": 89,
+      "away_score": 84,
+      "broadcast": "ESPN",
+      "source_url": "https://espn.com/game/401234567"
+    },
+    {
+      "id": "401234568",
+      "league": "MLB",
+      "status": "scheduled",
+      "start_time": "2024-01-15T20:05:00-05:00",
+      "start_time_utc": "2024-01-16T01:05:00+00:00",
+      "time_remaining": null,
+      "quarter": null,
+      "home_team": {
+        "name": "New York Yankees",
+        "abbreviation": "NYY",
+        "score": null
+      },
+      "away_team": {
+        "name": "Boston Red Sox",
+        "abbreviation": "BOS",
+        "score": null
+      },
+      "home_score": null,
+      "away_score": null,
+      "broadcast": "MLB Network",
+      "source_url": "https://espn.com/game/401234568"
+    },
+    {
+      "id": "401234569",
+      "league": "NHL",
+      "status": "final",
+      "start_time": "2024-01-14T19:00:00-05:00",
+      "start_time_utc": "2024-01-15T00:00:00+00:00",
+      "time_remaining": null,
+      "quarter": "Final",
+      "home_team": {
+        "name": "New York Rangers",
+        "abbreviation": "NYR",
+        "score": 4
+      },
+      "away_team": {
+        "name": "New Jersey Devils",
+        "abbreviation": "NJD",
+        "score": 3
+      },
+      "home_score": 4,
+      "away_score": 3,
+      "broadcast": "ESPN+",
+      "source_url": "https://espn.com/game/401234569"
+    },
+    {
+      "id": "401234570",
+      "league": "NBA",
+      "status": "in_progress",
+      "start_time": "2024-01-15T22:30:00-05:00",
+      "start_time_utc": "2024-01-16T03:30:00+00:00",
+      "time_remaining": "5:21",
+      "quarter": "Q4",
+      "home_team": {
+        "name": "Los Angeles Lakers",
+        "abbreviation": "LAL",
+        "score": 98
+      },
+      "away_team": {
+        "name": "Golden State Warriors",
+        "abbreviation": "GSW",
+        "score": 95
+      },
+      "home_score": 98,
+      "away_score": 95,
+      "broadcast": "TNT",
+      "source_url": "https://espn.com/game/401234570"
+    },
+    {
+      "id": "401234571",
+      "league": "NFL",
+      "status": "final",
+      "start_time": "2024-01-14T20:20:00-05:00",
+      "start_time_utc": "2024-01-15T01:20:00+00:00",
+      "time_remaining": null,
+      "quarter": "Final",
+      "home_team": {
+        "name": "Buffalo Bills",
+        "abbreviation": "BUF",
+        "score": 24
+      },
+      "away_team": {
+        "name": "Miami Dolphins",
+        "abbreviation": "MIA",
+        "score": 17
+      },
+      "home_score": 24,
+      "away_score": 17,
+      "broadcast": "CBS",
+      "source_url": "https://espn.com/game/401234571"
+    },
+    {
+      "id": "401234572",
+      "league": "MLB",
+      "status": "scheduled",
+      "start_time": "2024-01-16T13:05:00-05:00",
+      "start_time_utc": "2024-01-16T18:05:00+00:00",
+      "time_remaining": null,
+      "quarter": null,
+      "home_team": {
+        "name": "Toronto Blue Jays",
+        "abbreviation": "TOR",
+        "score": null
+      },
+      "away_team": {
+        "name": "Tampa Bay Rays",
+        "abbreviation": "TB",
+        "score": null
+      },
+      "home_score": null,
+      "away_score": null,
+      "broadcast": "MLB TV",
+      "source_url": "https://espn.com/game/401234572"
+    },
+    {
+      "id": "401234573",
+      "league": "NBA",
+      "status": "in_progress",
+      "start_time": "2024-01-15T19:00:00-05:00",
+      "start_time_utc": "2024-01-16T00:00:00+00:00",
+      "time_remaining": "4:15",
+      "quarter": "Q4",
+      "home_team": {
+        "name": "Brooklyn Nets",
+        "abbreviation": "BKN",
+        "score": 102
+      },
+      "away_team": {
+        "name": "Miami Heat",
+        "abbreviation": "MIA",
+        "score": 105
+      },
+      "home_score": 102,
+      "away_score": 105,
+      "broadcast": "NBA TV",
+      "source_url": "https://espn.com/game/401234573"
+    },
+    {
+      "id": "401234574",
+      "league": "NBA",
+      "status": "final",
+      "start_time": "2024-01-15T18:00:00-05:00",
+      "start_time_utc": "2024-01-15T23:00:00+00:00",
+      "time_remaining": null,
+      "quarter": "Final OT",
+      "home_team": {
+        "name": "Phoenix Suns",
+        "abbreviation": "PHX",
+        "score": 112
+      },
+      "away_team": {
+        "name": "Los Angeles Lakers",
+        "abbreviation": "LAL",
+        "score": 108
+      },
+      "home_score": 112,
+      "away_score": 108,
+      "broadcast": "TNT",
+      "source_url": "https://espn.com/game/401234574"
+    },
+    {
+      "id": "401234575",
+      "league": "MLB",
+      "status": "scheduled",
+      "start_time": "2024-01-16T20:10:00-05:00",
+      "start_time_utc": "2024-01-17T01:10:00+00:00",
+      "time_remaining": null,
+      "quarter": null,
+      "home_team": {
+        "name": "Boston Red Sox",
+        "abbreviation": "BOS",
+        "score": null
+      },
+      "away_team": {
+        "name": "Milwaukee Brewers",
+        "abbreviation": "MIL",
+        "score": null
+      },
+      "home_score": null,
+      "away_score": null,
+      "broadcast": "MLB Network",
+      "source_url": "https://espn.com/game/401234575"
+    },
+    {
+      "id": "401234576",
+      "league": "NHL",
+      "status": "in_progress",
+      "start_time": "2024-01-15T21:00:00-05:00",
+      "start_time_utc": "2024-01-16T02:00:00+00:00",
+      "time_remaining": "2:10",
+      "quarter": "3rd",
+      "home_team": {
+        "name": "Boston Bruins",
+        "abbreviation": "BOS",
+        "score": 2
+      },
+      "away_team": {
+        "name": "Toronto Maple Leafs",
+        "abbreviation": "TOR",
+        "score": 3
+      },
+      "home_score": 2,
+      "away_score": 3,
+      "broadcast": "NHL Network",
+      "source_url": "https://espn.com/game/401234576"
+    }
+  ]
+}

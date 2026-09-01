@@ -1,0 +1,16 @@
+[Unit]
+Description=nginx - high performance web server for Kitchen Hub
+After=network.target
+After=kitchen-hub@%i.service
+
+[Service]
+Type=forking
+PIDFile=/run/nginx.pid
+ExecStartPre=/usr/sbin/nginx -t -c /etc/nginx/nginx.conf
+ExecStart=/usr/sbin/nginx -c /etc/nginx/nginx.conf
+ExecReload=/usr/sbin/nginx -s reload
+ExecStop=/usr/sbin/nginx -s stop
+
+[Install]
+WantedBy=multi-user.target
+Also=kitchen-hub@%i.service kitchen-hub-kiosk@%i.service

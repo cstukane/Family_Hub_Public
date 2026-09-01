@@ -1,0 +1,16 @@
+[Unit]
+Description=Family Hub Main Application
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/opt/kitchen-hub
+Environment=PATH=/opt/kitchen-hub/.venv/bin
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/kitchen-hub/.venv/bin/python hub_app.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

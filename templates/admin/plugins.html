@@ -1,0 +1,470 @@
+{% extends "admin/admin.html" %}
+
+{% block title %}Plugin Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2>Plugin Management</h2>
+            <p>Manage installed plugins and browse the marketplace.</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Installed Plugins</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="plugins-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Version</th>
+                                    <th>Author</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="plugins-tbody">
+                                <!-- Plugins will be loaded here via AJAX -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Plugin Marketplace</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="search-marketplace" class="form-label">Search Plugins</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="search-marketplace" placeholder="Search for plugins...">
+                            <button class="btn btn-outline-secondary" type="button" id="search-btn">Search</button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="upload-plugin" class="form-label">Install from file</label>
+                        <input type="file" class="form-control" id="upload-plugin" accept=".zip">
+                        <button class="btn btn-primary mt-2" id="upload-btn">Upload Plugin</button>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <button class="btn btn-success w-100" id="check-updates-btn">Check for Updates</button>
+                    </div>
+                    
+                    <div class="alert alert-info" id="plugin-info-alert" style="display: none;">
+                        <div id="plugin-info-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Marketplace Results Modal -->
+    <div class="modal fade" id="marketplaceModal" tabindex="-1" aria-labelledby="marketplaceModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="marketplaceModalLabel">Marketplace Plugins</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="marketplace-results">
+                        <!-- Marketplace results will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadInstalledPlugins();
+    
+    // Load installed plugins
+    document.getElementById('plugins-tbody').addEventListener('click', function(e) {
+        if (e.target.classList.contains('enable-plugin')) {
+            const pluginName = e.target.getAttribute('data-plugin');
+            enablePlugin(pluginName);
+        } else if (e.target.classList.contains('disable-plugin')) {
+            const pluginName = e.target.getAttribute('data-plugin');
+            disablePlugin(pluginName);
+        } else if (e.target.classList.contains('reload-plugin')) {
+            const pluginName = e.target.getAttribute('data-plugin');
+            reloadPlugin(pluginName);
+        } else if (e.target.classList.contains('uninstall-plugin')) {
+            const pluginName = e.target.getAttribute('data-plugin');
+            uninstallPlugin(pluginName);
+        } else if (e.target.classList.contains('update-plugin')) {
+            const pluginName = e.target.getAttribute('data-plugin');
+            updatePlugin(pluginName);
+        }
+    });
+    
+    // Search marketplace
+    document.getElementById('search-btn').addEventListener('click', function() {
+        const query = document.getElementById('search-marketplace').value.trim();
+        if (query) {
+            searchMarketplace(query);
+        }
+    });
+    
+    // Upload plugin file
+    document.getElementById('upload-btn').addEventListener('click', function() {
+        const fileInput = document.getElementById('upload-plugin');
+        if (fileInput.files.length > 0) {
+            uploadPluginFile(fileInput.files[0]);
+        } else {
+            showAlert('Please select a plugin file to upload', 'warning');
+        }
+    });
+    
+    // Check for updates
+    document.getElementById('check-updates-btn').addEventListener('click', function() {
+        checkPluginUpdates();
+    });
+    
+    // Allow Enter key to trigger search
+    document.getElementById('search-marketplace').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('search-btn').click();
+        }
+    });
+});
+
+function loadInstalledPlugins() {
+    fetch('/api/plugins', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const tbody = document.getElementById('plugins-tbody');
+        tbody.innerHTML = '';
+        
+        if (data.plugins && data.plugins.length > 0) {
+            data.plugins.forEach(plugin => {
+                const row = document.createElement('tr');
+                const statusClass = plugin.enabled ? 'text-success' : 'text-warning';
+                const statusText = plugin.enabled ? 'Enabled' : 'Disabled';
+                
+                row.innerHTML = `
+                    <td>${plugin.name}</td>
+                    <td>${plugin.info.version || 'N/A'}</td>
+                    <td>${plugin.info.author || 'N/A'}</td>
+                    <td>${plugin.info.type || 'N/A'}</td>
+                    <td><span class="${statusClass}">${statusText}</span></td>
+                    <td>
+                        ${plugin.enabled 
+                            ? `<button class="btn btn-sm btn-outline-warning disable-plugin" data-plugin="${plugin.name}">Disable</button>`
+                            : `<button class="btn btn-sm btn-outline-success enable-plugin" data-plugin="${plugin.name}">Enable</button>`
+                        }
+                        <button class="btn btn-sm btn-outline-info reload-plugin" data-plugin="${plugin.name}">Reload</button>
+                        <button class="btn btn-sm btn-outline-danger uninstall-plugin" data-plugin="${plugin.name}">Uninstall</button>
+                        <button class="btn btn-sm btn-outline-primary update-plugin" data-plugin="${plugin.name}">Update</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        } else {
+            const row = document.createElement('tr');
+            row.innerHTML = '<td colspan="6" class="text-center">No plugins installed</td>';
+            tbody.appendChild(row);
+        }
+    })
+    .catch(error => {
+        console.error('Error loading plugins:', error);
+        showAlert('Error loading plugins: ' + error.message, 'danger');
+    });
+}
+
+function enablePlugin(pluginName) {
+    fetch(`/api/plugins/${pluginName}/enable`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showAlert(`Plugin ${pluginName} enabled successfully`, 'success');
+            loadInstalledPlugins(); // Reload the table
+        } else {
+            showAlert(`Error enabling plugin: ${data.message}`, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error enabling plugin:', error);
+        showAlert('Error enabling plugin: ' + error.message, 'danger');
+    });
+}
+
+function disablePlugin(pluginName) {
+    fetch(`/api/plugins/${pluginName}/disable`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showAlert(`Plugin ${pluginName} disabled successfully`, 'success');
+            loadInstalledPlugins(); // Reload the table
+        } else {
+            showAlert(`Error disabling plugin: ${data.message}`, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error disabling plugin:', error);
+        showAlert('Error disabling plugin: ' + error.message, 'danger');
+    });
+}
+
+function reloadPlugin(pluginName) {
+    fetch(`/api/plugins/${pluginName}/reload`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showAlert(`Plugin ${pluginName} reloaded successfully`, 'success');
+        } else {
+            showAlert(`Error reloading plugin: ${data.message}`, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error reloading plugin:', error);
+        showAlert('Error reloading plugin: ' + error.message, 'danger');
+    });
+}
+
+function uninstallPlugin(pluginName) {
+    if (confirm(`Are you sure you want to uninstall the plugin "${pluginName}"?`)) {
+        fetch(`/api/plugins/${pluginName}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showAlert(`Plugin ${pluginName} uninstalled successfully`, 'success');
+                loadInstalledPlugins(); // Reload the table
+            } else {
+                showAlert(`Error uninstalling plugin: ${data.message}`, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error uninstalling plugin:', error);
+            showAlert('Error uninstalling plugin: ' + error.message, 'danger');
+        });
+    }
+}
+
+function updatePlugin(pluginName) {
+    fetch(`/api/plugins/${pluginName}/update`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showAlert(`Plugin ${pluginName} updated successfully to ${data.new_version}`, 'success');
+            loadInstalledPlugins(); // Reload the table
+        } else if (data.status === 'no_update') {
+            showAlert(data.message, 'info');
+        } else {
+            showAlert(`Error updating plugin: ${data.message}`, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating plugin:', error);
+        showAlert('Error updating plugin: ' + error.message, 'danger');
+    });
+}
+
+function searchMarketplace(query) {
+    fetch(`/api/plugins/marketplace/search?q=${encodeURIComponent(query)}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        displayMarketplaceResults(data.plugins);
+    })
+    .catch(error => {
+        console.error('Error searching marketplace:', error);
+        showAlert('Error searching marketplace: ' + error.message, 'danger');
+    });
+}
+
+function displayMarketplaceResults(plugins) {
+    const resultsDiv = document.getElementById('marketplace-results');
+    
+    if (plugins.length === 0) {
+        resultsDiv.innerHTML = '<p class="text-center">No plugins found</p>';
+        return;
+    }
+    
+    let html = '<div class="row">';
+    plugins.forEach(plugin => {
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">${plugin.name}</h6>
+                        <p class="card-text text-muted small">${plugin.description}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted">
+                                <small>v${plugin.version} by ${plugin.author}</small><br>
+                                <small>Rating: ${plugin.rating}/5 (${plugin.downloads} downloads)</small>
+                            </div>
+                            <button class="btn btn-sm btn-primary install-marketplace-plugin" 
+                                    data-plugin="${plugin.name}">Install</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    
+    resultsDiv.innerHTML = html;
+    
+    // Add event listeners to install buttons
+    document.querySelectorAll('.install-marketplace-plugin').forEach(button => {
+        button.addEventListener('click', function() {
+            const pluginName = this.getAttribute('data-plugin');
+            installPluginFromMarketplace(pluginName);
+        });
+    });
+    
+    // Show the modal
+    var modal = new bootstrap.Modal(document.getElementById('marketplaceModal'));
+    modal.show();
+}
+
+function installPluginFromMarketplace(pluginName) {
+    fetch('/api/plugins', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ plugin_name: pluginName })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success' || data.status === 'partial') {
+            showAlert(data.message, data.status === 'success' ? 'success' : 'warning');
+            loadInstalledPlugins(); // Reload the table
+            // Close the modal
+            var modal = bootstrap.Modal.getInstance(document.getElementById('marketplaceModal'));
+            modal.hide();
+        } else {
+            showAlert(`Error installing plugin: ${data.message}`, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error installing plugin:', error);
+        showAlert('Error installing plugin: ' + error.message, 'danger');
+    });
+}
+
+function uploadPluginFile(file) {
+    const formData = new FormData();
+    formData.append('plugin_file', file);
+    
+    fetch('/api/plugins', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success' || data.status === 'partial') {
+            showAlert(data.message, data.status === 'success' ? 'success' : 'warning');
+            loadInstalledPlugins(); // Reload the table
+        } else {
+            showAlert(`Error installing plugin: ${data.message}`, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error uploading plugin:', error);
+        showAlert('Error uploading plugin: ' + error.message, 'danger');
+    });
+}
+
+function checkPluginUpdates() {
+    fetch('/api/plugins/check-updates', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (Object.keys(data.updates).length > 0) {
+            let updateMsg = 'Available updates:<br>';
+            for (const [plugin, version] of Object.entries(data.updates)) {
+                updateMsg += `${plugin}: ${version}<br>`;
+            }
+            showAlert(updateMsg, 'info');
+        } else {
+            showAlert('No plugin updates available', 'success');
+        }
+    })
+    .catch(error => {
+        console.error('Error checking for updates:', error);
+        showAlert('Error checking for updates: ' + error.message, 'danger');
+    });
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.getElementById('plugin-info-alert');
+    const contentDiv = document.getElementById('plugin-info-content');
+    
+    contentDiv.innerHTML = message;
+    alertDiv.className = `alert alert-${type}`;
+    alertDiv.style.display = 'block';
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        alertDiv.style.display = 'none';
+    }, 5000);
+}
+</script>
+{% endblock %}

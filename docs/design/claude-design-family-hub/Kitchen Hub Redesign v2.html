@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Kitchen Hub — UI Redesign v2</title>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #1a1c1f; }
+  @keyframes tickerScroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+/* ─────────────────────────────────────────────
+   TOKENS
+───────────────────────────────────────────── */
+const C = {
+  bg:       '#0d1117',
+  surface:  '#161b22',
+  surface2: '#21262d',
+  surface3: '#2d333b',
+  border:   'rgba(255,255,255,0.08)',
+  border2:  'rgba(255,255,255,0.14)',
+  text:     '#e6edf3',
+  dim:      '#8b949e',
+  muted:    '#484f58',
+  accent:   '#00b4d8',
+  accentBg: 'rgba(0,180,216,0.11)',
+};
+const F = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
+
+/* ─────────────────────────────────────────────
+   CALENDAR DATA
+───────────────────────────────────────────── */
+const WEEK = [
+  { abbr:'Mon', date:'2' },
+  { abbr:'Tue', date:'3' },
+  { abbr:'Wed', date:'4' },
+  { abbr:'Thu', date:'5' },
+  { abbr:'Fri', date:'6', today:true },
+  { abbr:'Sat', date:'7' },
+  { abbr:'Sun', date:'8' },
+];
+const EC = { work:'#00b4d8', family:'#f97316', personal:'#a78bfa', kids:'#34d399', home:'#8b949e', social:'#f43f5e' };
+const EVENTS = [
+  { day:0, title:'Team Standup',     start:9,    end:9.5,  color:EC.work },
+  { day:0, title:'Dentist — Emma',   start:14,   end:15.5, color:EC.personal },
+  { day:1, title:'Grocery Run',      start:10,   end:11,   color:EC.home },
+  { day:1, title:'Piano Lesson',     start:15.5, end:16.5, color:EC.kids },
+  { day:2, title:'Sprint Review',    start:13,   end:14,   color:EC.work },
+  { day:2, title:'Soccer Practice',  start:16,   end:17.5, color:EC.kids },
+  { day:3, title:'Date Night',       start:19,   end:21,   color:EC.family },
+  { day:4, title:'School Pickup',    start:15,   end:15.5, color:EC.kids },
+  { day:4, title:'Book Club',        start:18,   end:20,   color:EC.personal },
+  { day:5, title:"Farmer's Market",  start:9,    end:11,   color:EC.family },
+  { day:5, title:'BBQ — Neighbors',  start:15,   end:19,   color:EC.social },
+  { day:6, title:'Meal Prep',        start:11,   end:13,   color:EC.home },
+  { day:6, title:'Movie Night',      start:19,   end:21,   color:EC.family },
+];
+const ALL_DAY = [
+  { day:3, title:'WFH',            color:EC.work },
+  { day:4, title:'WFH',            color:EC.work },
+  { day:5, title:"Dad's Birthday", color:EC.family },
+];
+const S_H = 7, E_H = 21, NOW = 14 + 20/60;
+
+function fmtHour(h) {
+  if (h===12) return '12pm';
+  if (h===0||h===24) return '12am';
+  return h<12 ? `${h}am` : `${h-12}pm`;
+}
+function fmtTime(h) {
+  const hr=Math.floor(h), m=Math.round((h%1)*60);
+  return `${hr%12||12}${m?`:${String(m).padStart(2,'0')}`:''}${hr<12?'am':'pm'}`;
+}
+
+/* ─────────────────────────────────────────────
+   WEATHER ICONS
+───────────────────────────────────────────── */
+function WIco({ type, size=20 }) {
+  const s = { width:size, height:size, display:'block', flexShrink:0 };
+  const p = { fill:'none', stroke:'currentColor', strokeWidth:1.8, strokeLinecap:'round' };
+  if (type==='sunny') return (
+    <svg style={s} viewBox="0 0 24 24" {...p}>
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    </svg>
+  );
+  if (type==='partly') return (
+    <svg style={s} viewBox="0 0 24 24" {...p}>
+      <circle cx="9" cy="9" r="3"/>
+      <path d="M7 15h10a4 4 0 0 0 0-8 5 5 0 0 0-8.06 2.7"/>
+    </svg>
+  );
+  if (type==='rain') return (
+    <svg style={s} viewBox="0 0 24 24" {...p}>
+      <path d="M5 16h12a4 4 0 0 0 0-8 5 5 0 0 0-9.5 1.5 3 3 0 0 0-2.5 6.5z"/>
+      <path d="M9 19l-1 3M13 19v3M17 19l-1 3"/>
+    </svg>
+  );
+  return (
+    <svg style={s} viewBox="0 0 24 24" {...p}>
+      <path d="M6 18h11a4 4 0 0 0 0-8 5 5 0 0 0-9 3 3 3 0 0 0-2 5z"/>
+    </svg>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   CALENDAR
+───────────────────────────────────────────── */
+function CalendarNav() {
+  const btnBase = { background:'none', border:`1px solid ${C.border}`, borderRadius:20, cursor:'pointer', fontFamily:F, fontSize:12, fontWeight:500 };
+  return (
+    <div style={{ display:'flex', alignItems:'center', marginBottom:10, fontFamily:F }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginRight:'auto' }}>
+        <button style={{ ...btnBase, border:'none', color:C.dim, fontSize:17, padding:'2px 8px' }}>‹</button>
+        <span style={{ fontSize:17, fontWeight:600, color:C.text, letterSpacing:'-0.01em' }}>June 2026</span>
+        <button style={{ ...btnBase, border:'none', color:C.dim, fontSize:17, padding:'2px 8px' }}>›</button>
+        <button style={{ ...btnBase, color:C.accent, padding:'3px 11px', borderColor:C.accent+'44' }}>Today</button>
+      </div>
+      <div style={{ display:'flex', gap:5, alignItems:'center' }}>
+        {['Week','Month'].map(v=>(
+          <button key={v} style={{
+            ...btnBase, padding:'4px 12px',
+            background:v==='Week'?C.accentBg:'transparent',
+            borderColor:v==='Week'?C.accent+'55':C.border,
+            color:v==='Week'?C.accent:C.dim,
+          }}>{v}</button>
+        ))}
+        <button style={{ ...btnBase, color:C.dim, width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, borderRadius:'50%', padding:0, border:`1px solid ${C.border}` }}>+</button>
+      </div>
+    </div>
+  );
+}
+
+function DayHeaders() {
+  return (
+    <div style={{ display:'flex', marginBottom:8 }}>
+      <div style={{ width:46, flexShrink:0 }}/>
+      {WEEK.map((d,i)=>(
+        <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:5, paddingBottom:10, borderBottom:`1px solid ${d.today?C.accent+'77':C.border}` }}>
+          <span style={{ fontSize:11, fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:d.today?C.accent:C.dim }}>{d.abbr}</span>
+          <div style={{ width:30, height:30, borderRadius:'50%', background:d.today?C.accent:'transparent', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:d.today?700:400, color:d.today?'#0d1117':C.text }}>{d.date}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CalendarGrid({ gridH=580 }) {
+  const adH = 32;
+  const timeH = gridH - adH - 14;
+  const hh = timeH / (E_H - S_H);
+  return (
+    <div style={{ height:gridH, display:'flex', flexDirection:'column', fontFamily:F }}>
+      {/* All-day */}
+      <div style={{ height:adH, display:'flex', marginBottom:6 }}>
+        <div style={{ width:46, flexShrink:0, fontSize:10, color:C.muted, textAlign:'right', paddingRight:8, paddingTop:2, lineHeight:1.3 }}>all<br/>day</div>
+        {WEEK.map((d,di)=>(
+          <div key={di} style={{ flex:1, paddingLeft:4, paddingRight:2, display:'flex', flexDirection:'column', gap:2, justifyContent:'center' }}>
+            {ALL_DAY.filter(e=>e.day===di).map((e,ei)=>(
+              <div key={ei} style={{ background:e.color+'20', borderLeft:`2px solid ${e.color}`, borderRadius:3, padding:'2px 5px', fontSize:10, color:C.dim, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{e.title}</div>
+            ))}
+          </div>
+        ))}
+      </div>
+      <div style={{ height:1, background:C.border, marginBottom:7 }}/>
+      {/* Grid */}
+      <div style={{ height:timeH, display:'flex' }}>
+        {/* Hours */}
+        <div style={{ width:46, flexShrink:0, position:'relative' }}>
+          {Array.from({length:E_H-S_H},(_,i)=>(
+            <div key={i} style={{ position:'absolute', top:i*hh-8, right:8, fontSize:10, color:C.muted, lineHeight:1, whiteSpace:'nowrap' }}>{i===0?'':fmtHour(S_H+i)}</div>
+          ))}
+        </div>
+        {/* Columns */}
+        {WEEK.map((d,di)=>{
+          const evts=EVENTS.filter(e=>e.day===di);
+          return (
+            <div key={di} style={{ flex:1, position:'relative', borderLeft:`1px solid ${C.border}`, background:d.today?'rgba(0,180,216,0.03)':'transparent', height:timeH }}>
+              {Array.from({length:E_H-S_H+1},(_,i)=>(
+                <div key={i} style={{ position:'absolute', top:i*hh, left:0, right:0, height:1, background:i%2===0?C.border:'rgba(255,255,255,0.025)' }}/>
+              ))}
+              {evts.map((evt,ei)=>{
+                const top=(evt.start-S_H)*hh, evtH=Math.max((evt.end-evt.start)*hh-2,18);
+                return (
+                  <div key={ei} style={{ position:'absolute', top:top+1, left:3, right:3, height:evtH, background:evt.color+'1c', borderLeft:`3px solid ${evt.color}`, borderRadius:5, padding:'3px 6px', overflow:'hidden', zIndex:2 }}>
+                    <div style={{ fontSize:11, fontWeight:600, color:C.text, lineHeight:1.3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{evt.title}</div>
+                    {evtH>28 && <div style={{ fontSize:10, color:C.dim, marginTop:1 }}>{fmtTime(evt.start)}</div>}
+                  </div>
+                );
+              })}
+              {d.today && (
+                <div style={{ position:'absolute', top:(NOW-S_H)*hh, left:-4, right:0, display:'flex', alignItems:'center', zIndex:10, pointerEvents:'none' }}>
+                  <div style={{ width:9, height:9, borderRadius:'50%', background:C.accent, flexShrink:0 }}/>
+                  <div style={{ flex:1, height:2, background:C.accent, opacity:0.85 }}/>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   BELOW CALENDAR ROW
+───────────────────────────────────────────── */
+function BelowCalendar() {
+  const cardStyle = { flex:1, background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:'14px 16px' };
+  const labelStyle = { fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:C.muted, marginBottom:10 };
+
+  return (
+    <div style={{ display:'flex', gap:12, marginTop:10, fontFamily:F }}>
+
+      {/* Up Next */}
+      <div style={cardStyle}>
+        <div style={labelStyle}>Up Next</div>
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {[
+            { time:'2:20pm', title:'Now \u2014 Afternoon',   color:C.accent, bold:true },
+            { time:'3:00pm', title:'School Pickup',          color:EC.kids },
+            { time:'6:00pm', title:'Book Club',              color:EC.personal },
+            { time:'Sat 9am', title:"Farmer's Market",       color:EC.family },
+          ].map((e,i)=>(
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:9 }}>
+              <div style={{ width:3, height:20, borderRadius:2, background:e.color, flexShrink:0 }}/>
+              <span style={{ fontSize:11, color:C.muted, width:64, flexShrink:0 }}>{e.time}</span>
+              <span style={{ fontSize:13, fontWeight:e.bold?600:500, color:e.bold?C.accent:C.text }}>{e.title}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Shopping */}
+      <div style={cardStyle}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+          <div style={labelStyle}>Shopping</div>
+          <span style={{ fontSize:11, background:C.accent, color:'#0d1117', borderRadius:99, padding:'2px 8px', fontWeight:700 }}>7 items</span>
+        </div>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:'7px 14px' }}>
+          {['Milk (2%)', 'Eggs x2', 'Avocados', 'Chicken breast', 'Olive oil'].map((item,i)=>(
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:7, width:'calc(50% - 7px)' }}>
+              <div style={{ width:13, height:13, borderRadius:3, border:`1.5px solid ${C.border2}`, flexShrink:0 }}/>
+              <span style={{ fontSize:12, color:C.dim }}>{item}</span>
+            </div>
+          ))}
+          <div style={{ fontSize:11, color:C.muted, marginTop:2, width:'100%' }}>+2 more items</div>
+        </div>
+      </div>
+
+      {/* Quick Timer */}
+      <div style={{ ...cardStyle, flex:0.85 }}>
+        <div style={labelStyle}>Quick Timer</div>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:10 }}>
+          {['5 min','10 min','15 min','30 min'].map(t=>(
+            <button key={t} style={{ padding:'6px 10px', background:C.surface2, border:`1px solid ${C.border}`, borderRadius:8, color:C.dim, fontSize:12, fontWeight:500, cursor:'pointer', fontFamily:F }}>{t}</button>
+          ))}
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+          <div style={{ flex:1, height:28, background:C.surface2, border:`1px solid ${C.border}`, borderRadius:8, display:'flex', alignItems:'center', paddingLeft:10 }}>
+            <span style={{ fontSize:12, color:C.muted }}>Custom…</span>
+          </div>
+          <button style={{ height:28, padding:'0 12px', background:C.accentBg, border:`1px solid ${C.accent+'55'}`, borderRadius:8, color:C.accent, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:F }}>Start</button>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   SIDEBAR CLOCK
+───────────────────────────────────────────── */
+function SidebarClock() {
+  return (
+    <div style={{ fontFamily:F, textAlign:'right', paddingBottom:16, borderBottom:`1px solid ${C.border}` }}>
+      <div style={{ fontSize:52, fontWeight:300, letterSpacing:'-0.04em', lineHeight:1, color:C.text }}>
+        2:20<span style={{ fontSize:22, fontWeight:300, color:C.dim, marginLeft:4 }}>pm</span>
+      </div>
+      <div style={{ fontSize:13, color:C.dim, marginTop:6, letterSpacing:'0.02em' }}>Friday, June 6, 2026</div>
+      <div style={{ height:2, background:C.surface3, borderRadius:2, marginTop:10, overflow:'hidden' }}>
+        <div style={{ width:'60%', height:'100%', background:`linear-gradient(90deg, ${C.accentBg}, ${C.accent})`, borderRadius:2 }}/>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   SIDEBAR UTILS — card with dividers
+───────────────────────────────────────────── */
+const UTILS = [
+  { label:'Notes',       badge:3, icon:<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> },
+  { label:'Shopping',    badge:7, icon:<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> },
+  { label:'Timers',      badge:0, icon:<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> },
+  { label:'Kitchen Ref', badge:0, icon:<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg> },
+];
+
+function SidebarUtils() {
+  return (
+    <div style={{ background:C.surface2, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', fontFamily:F }}>
+      {UTILS.map((u,i)=>(
+        <React.Fragment key={u.label}>
+          {i>0 && <div style={{ height:1, background:C.border }}/>}
+          <button style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background:'transparent', border:'none', width:'100%', cursor:'pointer', fontFamily:F }}>
+            <div style={{ color:C.dim, flexShrink:0 }}>{u.icon}</div>
+            <span style={{ flex:1, fontSize:13, fontWeight:500, color:C.dim, textAlign:'left' }}>{u.label}</span>
+            {u.badge>0 && (
+              <span style={{ background:C.accent, color:'#0d1117', borderRadius:99, fontSize:10, fontWeight:700, padding:'1px 7px', lineHeight:'18px', minWidth:20, textAlign:'center' }}>{u.badge}</span>
+            )}
+          </button>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   WEATHER PANEL — improved sizes
+───────────────────────────────────────────── */
+const HOURLY = [
+  { t:'1PM', temp:74, type:'partly' },
+  { t:'2PM', temp:73, type:'partly' },
+  { t:'3PM', temp:71, type:'cloudy' },
+  { t:'4PM', temp:69, type:'cloudy' },
+  { t:'5PM', temp:67, type:'rain' },
+];
+const DAILY = [
+  { d:'Sat', hi:78, lo:62, type:'partly' },
+  { d:'Sun', hi:82, lo:65, type:'sunny' },
+  { d:'Mon', hi:75, lo:60, type:'rain' },
+];
+
+function WeatherPanel() {
+  return (
+    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:'16px 14px', fontFamily:F, display:'flex', flexDirection:'column', gap:14 }}>
+      {/* Current */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+        <div>
+          <div style={{ display:'flex', alignItems:'flex-start', gap:2 }}>
+            <span style={{ fontSize:52, fontWeight:300, letterSpacing:'-0.04em', color:C.text, lineHeight:1 }}>72</span>
+            <span style={{ fontSize:20, fontWeight:300, color:C.dim, marginTop:6 }}>°F</span>
+          </div>
+          <div style={{ fontSize:14, color:C.dim, marginTop:5 }}>Partly Cloudy</div>
+          <div style={{ display:'flex', gap:10, marginTop:7, fontSize:13, color:C.dim }}>
+            <span>Feels 68°</span>
+            <span style={{ color:C.muted }}>·</span>
+            <span>Wind 8 mph</span>
+          </div>
+        </div>
+        <div style={{ color:C.dim, marginTop:4 }}><WIco type="partly" size={46}/></div>
+      </div>
+
+      {/* Hourly */}
+      <div>
+        <div style={{ fontSize:11, fontWeight:700, letterSpacing:'0.09em', textTransform:'uppercase', color:C.dim, marginBottom:8 }}>Next 5 Hours</div>
+        <div style={{ display:'flex', gap:4 }}>
+          {HOURLY.map((h,i)=>(
+            <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:6, padding:'9px 4px', background:C.surface2, borderRadius:8 }}>
+              <span style={{ fontSize:11, color:C.dim }}>{h.t}</span>
+              <div style={{ color:C.dim, opacity:0.85 }}><WIco type={h.type} size={18}/></div>
+              <span style={{ fontSize:15, fontWeight:600, color:C.text }}>{h.temp}°</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ height:1, background:C.border }}/>
+
+      {/* Daily — taller rows, bigger text */}
+      <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+        {DAILY.map((d,i)=>(
+          <div key={i} style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <span style={{ width:30, fontSize:14, fontWeight:500, color:C.dim }}>{d.d}</span>
+            <div style={{ color:C.dim, opacity:0.85 }}><WIco type={d.type} size={18}/></div>
+            <div style={{ flex:1, height:4, borderRadius:2, background:C.surface3, overflow:'hidden' }}>
+              <div style={{ width:`${((d.hi-50)/40)*100}%`, height:'100%', background:`linear-gradient(90deg, ${C.accent}44, ${C.accent}99)`, borderRadius:2 }}/>
+            </div>
+            <span style={{ fontSize:14, fontWeight:600, color:C.text, width:30, textAlign:'right' }}>{d.hi}°</span>
+            <span style={{ fontSize:13, color:C.muted, width:30, textAlign:'right' }}>{d.lo}°</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   MINIPLAYER — compact card
+───────────────────────────────────────────── */
+function MiniplayerCard() {
+  return (
+    <div style={{ background:C.surface2, border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 14px', fontFamily:F }}>
+      <div style={{ display:'flex', alignItems:'center', gap:11 }}>
+        <div style={{ width:46, height:46, borderRadius:8, flexShrink:0, background:'linear-gradient(135deg,#1DB954,#0f6b2f)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M8 15.5c2.5-1 5.5-1 8 0M7 12c3-1.2 7-1.2 10 0M8 8.5c2.5-.8 6-.8 8 0" stroke="white" strokeWidth="1.8" strokeLinecap="round"/></svg>
+        </div>
+        <div style={{ flex:1, overflow:'hidden' }}>
+          <div style={{ fontSize:13, fontWeight:600, color:C.text, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>Golden Hour</div>
+          <div style={{ fontSize:11, color:C.dim, marginTop:2 }}>JVKE · Spotify</div>
+        </div>
+        <div style={{ display:'flex', gap:3 }}>
+          {[{c:'⏮',a:false},{c:'⏸',a:true},{c:'⏭',a:false}].map((b,i)=>(
+            <button key={i} style={{ width:30,height:30,background:'none',border:'none',cursor:'pointer',color:b.a?C.accent:C.dim,fontSize:b.a?17:15,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:'50%' }}>{b.c}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:10 }}>
+        <span style={{ fontSize:10, color:C.muted, width:26 }}>1:24</span>
+        <div style={{ flex:1, height:3, background:C.surface3, borderRadius:2 }}>
+          <div style={{ width:'38%', height:'100%', background:C.accent, borderRadius:2 }}/>
+        </div>
+        <span style={{ fontSize:10, color:C.muted, width:26, textAlign:'right' }}>3:32</span>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   MINIPLAYER — expanded: source + playlists
+───────────────────────────────────────────── */
+function MiniplayerExpanded() {
+  const SOURCES = ['Spotify','Podcasts','FM Radio'];
+  const LISTS = [
+    { name:'Daily Mix 1',         meta:'Based on recent plays' },
+    { name:'Liked Songs',         meta:'2,418 songs' },
+    { name:'Morning Energy',      meta:'47 songs' },
+    { name:'Chill Kitchen Vibes', meta:'23 songs' },
+  ];
+  return (
+    <div style={{ background:C.surface2, border:`1px solid ${C.border}`, borderRadius:12, overflow:'hidden', fontFamily:F }}>
+      {/* Now playing */}
+      <div style={{ padding:'12px 14px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:11 }}>
+          <div style={{ width:44, height:44, borderRadius:7, flexShrink:0, background:'linear-gradient(135deg,#1DB954,#0f6b2f)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M8 15.5c2.5-1 5.5-1 8 0M7 12c3-1.2 7-1.2 10 0M8 8.5c2.5-.8 6-.8 8 0" stroke="white" strokeWidth="1.8" strokeLinecap="round"/></svg>
+          </div>
+          <div style={{ flex:1, overflow:'hidden' }}>
+            <div style={{ fontSize:13, fontWeight:600, color:C.text, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>Golden Hour</div>
+            <div style={{ fontSize:11, color:C.dim, marginTop:2 }}>JVKE · Spotify</div>
+          </div>
+          <div style={{ display:'flex', gap:3 }}>
+            {[{c:'⏮',a:false},{c:'⏸',a:true},{c:'⏭',a:false}].map((b,i)=>(
+              <button key={i} style={{ width:28,height:28,background:'none',border:'none',cursor:'pointer',color:b.a?C.accent:C.dim,fontSize:b.a?16:14,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:'50%' }}>{b.c}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:9 }}>
+          <span style={{ fontSize:10, color:C.muted, width:26 }}>1:24</span>
+          <div style={{ flex:1, height:3, background:C.surface3, borderRadius:2 }}>
+            <div style={{ width:'38%', height:'100%', background:C.accent, borderRadius:2 }}/>
+          </div>
+          <span style={{ fontSize:10, color:C.muted, width:26, textAlign:'right' }}>3:32</span>
+        </div>
+      </div>
+
+      <div style={{ height:1, background:C.border }}/>
+
+      {/* Source selector */}
+      <div style={{ padding:'10px 14px 10px' }}>
+        <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.09em', textTransform:'uppercase', color:C.muted, marginBottom:8 }}>Source</div>
+        <div style={{ display:'flex', gap:5 }}>
+          {SOURCES.map((s,i)=>(
+            <button key={s} style={{
+              flex:1, padding:'7px 4px', textAlign:'center',
+              background: i===0 ? C.accentBg : C.surface3,
+              border: `1px solid ${i===0 ? C.accent+'66' : C.border}`,
+              borderRadius:8,
+              color: i===0 ? C.accent : C.dim,
+              fontSize:12, fontWeight:i===0?600:500,
+              cursor:'pointer', fontFamily:F,
+            }}>{s}</button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ height:1, background:C.border }}/>
+
+      {/* Playlists */}
+      <div style={{ padding:'8px 0 4px' }}>
+        <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.09em', textTransform:'uppercase', color:C.muted, margin:'0 14px 6px' }}>Playlists</div>
+        {LISTS.map((pl,i)=>(
+          <React.Fragment key={i}>
+            {i>0 && <div style={{ height:1, background:C.border }}/>}
+            <button style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 14px', background:'transparent', border:'none', width:'100%', cursor:'pointer', fontFamily:F }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+              <span style={{ flex:1, fontSize:13, color:C.text, textAlign:'left' }}>{pl.name}</span>
+              <span style={{ fontSize:11, color:C.muted }}>{pl.meta}</span>
+            </button>
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   APP BAR — refined cards, strong active state
+───────────────────────────────────────────── */
+const APPS = [
+  { label:'Home',    homeIcon:true },
+  { label:'Spotify', bg:'#1DB954', tc:'white',  g:'S' },
+  { label:'YouTube', bg:'#FF0000', tc:'white',  g:'\u25B6' },
+  { label:'ESPN',    bg:'#CC0000', tc:'white',  g:'E' },
+  { label:'Disney+', bg:'#0E3BC4', tc:'white',  g:'D' },
+  { label:'HBO',     bg:'#111',    tc:'#a78bfa',g:'M' },
+  { label:'Roku',    bg:'#662D91', tc:'white',  g:'R' },
+  { label:'Pluto',   bg:'#0B4FFF', tc:'white',  g:'P' },
+];
+const MORE_APPS = [
+  { label:'Apps',     appsIcon:true },
+  { label:'Settings', setIcon:true },
+];
+
+function AppIcon({ app, sz=30 }) {
+  if (app.homeIcon) return (
+    <div style={{ width:sz, height:sz, display:'flex', alignItems:'center', justifyContent:'center', color:C.accent }}>
+      <svg width={sz*0.72} height={sz*0.72} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </div>
+  );
+  if (app.appsIcon) return (
+    <div style={{ width:sz, height:sz, display:'flex', alignItems:'center', justifyContent:'center', color:C.dim }}>
+      <svg width={sz*0.72} height={sz*0.72} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    </div>
+  );
+  if (app.setIcon) return (
+    <div style={{ width:sz, height:sz, display:'flex', alignItems:'center', justifyContent:'center', color:C.dim }}>
+      <svg width={sz*0.72} height={sz*0.72} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </div>
+  );
+  return (
+    <div style={{ width:sz, height:sz, borderRadius:sz/5, background:app.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:sz*0.38, fontWeight:700, color:app.tc, flexShrink:0, letterSpacing:'-0.01em' }}>{app.g}</div>
+  );
+}
+
+function AppBar() {
+  return (
+    <div style={{ height:76, background:C.surface, borderTop:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'0 24px', fontFamily:F }}>
+      {APPS.map((app,i)=>{
+        const active = i===0;
+        return (
+          <button key={i} style={{
+            display:'flex', flexDirection:'column', alignItems:'center', gap:5,
+            padding:'7px 12px',
+            background: active ? C.accentBg : 'transparent',
+            border: `1px solid ${active ? C.accent : C.border}`,
+            borderRadius:12, cursor:'pointer', minWidth:70,
+            position:'relative',
+          }}>
+            <AppIcon app={app} sz={30}/>
+            <span style={{ fontSize:11, color:active?C.accent:C.dim, fontFamily:F, fontWeight:active?600:500 }}>{app.label}</span>
+            {active && <div style={{ position:'absolute', bottom:5, left:'50%', transform:'translateX(-50%)', width:4, height:4, borderRadius:'50%', background:C.accent }}/>}
+          </button>
+        );
+      })}
+      <div style={{ width:1, height:40, background:C.border, margin:'0 3px' }}/>
+      {MORE_APPS.map((app,i)=>(
+        <button key={i} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'7px 12px', background:'transparent', border:`1px solid ${C.border}`, borderRadius:12, cursor:'pointer', minWidth:70 }}>
+          <AppIcon app={app} sz={30}/>
+          <span style={{ fontSize:11, color:C.dim, fontFamily:F, fontWeight:500 }}>{app.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   SPORTS TICKER — no label
+───────────────────────────────────────────── */
+const TICKER = [
+  '\u26BE  Cubs  3  \u00b7  Cardinals  5  \u2014  Final',
+  '\u{1F3C0}  Warriors  98  \u00b7  Celtics  94  \u2014  Live  Q3  4:22',
+  '\u26BD  LA Galaxy  1  \u00b7  Sounders  1  \u2014  FT',
+  '\u{1F3C8}  Chiefs  24  \u00b7  Ravens  17  \u2014  3rd  12:32',
+  '\u26BE  Yankees  7  \u00b7  Red Sox  2  \u2014  Final',
+  '\u{1F3D2}  Avalanche  3  \u00b7  Rangers  2  \u2014  OT',
+];
+
+function SportsTicker() {
+  return (
+    <div style={{ height:44, background:'#09090c', borderTop:`1px solid ${C.border}`, display:'flex', alignItems:'center', overflow:'hidden', fontFamily:F }}>
+      <div style={{ flex:1, overflow:'hidden' }}>
+        <div style={{ display:'flex', gap:48, padding:'0 32px', whiteSpace:'nowrap', animation:'tickerScroll 55s linear infinite' }}>
+          {[...TICKER,...TICKER].map((item,i)=>(
+            <span key={i} style={{ fontSize:13, color:C.dim, flexShrink:0 }}>{item}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   SIDEBAR SHELL (shared)
+───────────────────────────────────────────── */
+function Sidebar({ children }) {
+  return (
+    <div style={{ width:286, borderLeft:`1px solid ${C.border}`, background:C.surface, padding:'20px 18px', display:'flex', flexDirection:'column', gap:14, overflow:'hidden', flexShrink:0 }}>
+      <SidebarClock/>
+      <SidebarUtils/>
+      {children}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   LAYOUT A — Compact miniplayer
+───────────────────────────────────────────── */
+function LayoutA() {
+  return (
+    <div style={{ width:1920, height:1080, background:C.bg, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+      <div style={{ flex:1, display:'flex', overflow:'hidden' }}>
+        <div style={{ flex:1, padding:'20px 12px 20px 22px', display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
+          <CalendarNav/>
+          <DayHeaders/>
+          <CalendarGrid gridH={580}/>
+          <BelowCalendar/>
+        </div>
+        <Sidebar>
+          <div style={{ flex:1, minHeight:0, overflow:'hidden' }}><WeatherPanel/></div>
+          <MiniplayerCard/>
+        </Sidebar>
+      </div>
+      <AppBar/>
+      <SportsTicker/>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   LAYOUT B — Expanded miniplayer concept
+───────────────────────────────────────────── */
+function LayoutB() {
+  return (
+    <div style={{ width:1920, height:1080, background:C.bg, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+      <div style={{ flex:1, display:'flex', overflow:'hidden' }}>
+        <div style={{ flex:1, padding:'20px 12px 20px 22px', display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
+          <CalendarNav/>
+          <DayHeaders/>
+          <CalendarGrid gridH={580}/>
+          <BelowCalendar/>
+        </div>
+        <Sidebar>
+          <div style={{ flex:1, minHeight:0, overflow:'hidden' }}><WeatherPanel/></div>
+          <MiniplayerExpanded/>
+        </Sidebar>
+      </div>
+      <AppBar/>
+      <SportsTicker/>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   ROOT
+───────────────────────────────────────────── */
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="hub" title={"Kitchen Hub \u2014 UI Redesign"} subtitle={"v2 \u00b7 Dark \u00b7 1920\u00d71080"}>
+        <DCArtboard id="a" label="Compact Miniplayer (now playing)" width={1920} height={1080}>
+          <LayoutA/>
+        </DCArtboard>
+        <DCArtboard id="b" label="Expanded Miniplayer (source + browse)" width={1920} height={1080}>
+          <LayoutB/>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

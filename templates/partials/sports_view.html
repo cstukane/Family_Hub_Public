@@ -1,0 +1,379 @@
+<div class="sports-view" id="sports-view" role="region" aria-labelledby="sports-dashboard-title">
+    <div class="sports-header" role="banner" aria-label="Sports dashboard header">
+        <h2 id="sports-dashboard-title">Sports Dashboard</h2>
+        <div class="sports-controls" role="toolbar" aria-label="Sports controls">
+            <button hx-post="/api/sports/refresh" 
+                    hx-target="#sports-view" 
+                    hx-swap="innerHTML" 
+                    class="btn btn-primary"
+                    aria-label="Refresh sports data">
+                Refresh Sports Data
+            </button>
+            <span class="last-updated" aria-label="Last updated: {{ sports_data.last_updated.strftime('%H:%M') if sports_data.last_updated else 'N/A' }}">
+                Last updated: 
+                <span hx-get="/api/sports/last-updated" hx-trigger="every 60s" hx-swap="innerHTML">
+                    {{ sports_data.last_updated.strftime('%H:%M') if sports_data.last_updated else 'N/A' }}
+                </span>
+            </span>
+        </div>
+    </div>
+
+    <div class="sports-filters" role="region" aria-labelledby="filter-teams-title">
+        <h3 id="filter-teams-title">Filter by Teams</h3>
+        <div class="team-filter-list" role="list" aria-label="Favorite teams filter">
+            {% for team_name in favorite_teams %}
+                <button class="team-filter-btn active" 
+                        data-team="{{ team_name }}" 
+                        role="listitem"
+                        aria-label="Filter by {{ team_name.title() }} team"
+                        aria-pressed="true">
+                    {{ team_name.title() }}
+                </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="sports-content" role="main" aria-label="Sports games list">
+        {% if sports_data.games %}
+            <div class="games-container" role="feed" aria-label="Sports games">
+                {% for game in sports_data.games %}
+                    <div class="game-card {{ 'live' if game.status == 'in_progress' else 'upcoming' if game.status == 'scheduled' else 'completed' }}" 
+                         role="article" 
+                         aria-label="{{ game.away_team.name }} vs {{ game.home_team.name }}, {{ game.status.title() }} {% if game.status == 'in_progress' %}{{ game.time_remaining or game.quarter or 'LIVE' }}{% elif game.start_time %}at {{ game.start_time.strftime('%I:%M %p') }}{% endif %}, Score: {{ game.away_team.name }} {{ game.away_score }} - {{ game.home_team.name }} {{ game.home_score }}">
+                        <div class="game-header" aria-label="Game status information">
+                            <div class="game-status-badge" aria-label="Game status">
+                                <span class="status {{ game.status }}" aria-label="Status: {{ game.status.title() }}">{{ game.status.title() }}</span>
+                                {% if game.status == 'in_progress' %}
+                                    <span class="live-clock" aria-label="Current game time: {{ game.time_remaining or game.quarter or 'LIVE' }}">{{ game.time_remaining or game.quarter or 'LIVE' }}</span>
+                                {% endif %}
+                            </div>
+                            {% if game.venue %}
+                                <div class="game-venue" aria-label="Venue: {{ game.venue }}">{{ game.venue }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="game-teams" aria-label="Teams and scores">
+                            <div class="team away-team" aria-label="Away team: {{ game.away_team.name }}">
+                                <div class="team-info">
+                                    <div class="team-logo">
+                                        {% if game.away_team.logo_url %}
+                                            <img src="{{ game.away_team.logo_url }}" alt="{{ game.away_team.name }} logo" aria-hidden="true"/>
+                                        {% else %}
+                                            <div class="team-initial" aria-label="{{ game.away_team.name }} initials">{{ game.away_team.abbreviation or game.away_team.name[:3] }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="team-name" aria-label="{{ game.away_team.name }}">{{ game.away_team.name }}</div>
+                                    <div class="team-abbr" aria-label="{{ game.away_team.abbreviation }}">{{ game.away_team.abbreviation }}</div>
+                                </div>
+                                <div class="team-score" aria-label="Away team score: {{ game.away_score }}">{{ game.away_score }}</div>
+                            </div>
+
+                            <div class="game-center" aria-label="Game time and VS">
+                                <div class="game-time" aria-label="Game date and time: 
+                                    {% if game.start_time %}
+                                        {{ game.start_time.strftime('%A, %B %d') }}
+                                        {{ game.start_time.strftime('%I:%M %p') }}
+                                    {% endif %}">
+                                    {% if game.start_time %}
+                                        {{ game.start_time.strftime('%A, %B %d') }}
+                                        <br>
+                                        {{ game.start_time.strftime('%I:%M %p') }}
+                                    {% endif %}
+                                </div>
+                                <div class="vs" aria-hidden="true">VS</div>
+                            </div>
+
+                            <div class="team home-team" aria-label="Home team: {{ game.home_team.name }}">
+                                <div class="team-info">
+                                    <div class="team-logo">
+                                        {% if game.home_team.logo_url %}
+                                            <img src="{{ game.home_team.logo_url }}" alt="{{ game.home_team.name }} logo" aria-hidden="true"/>
+                                        {% else %}
+                                            <div class="team-initial" aria-label="{{ game.home_team.name }} initials">{{ game.home_team.abbreviation or game.home_team.name[:3] }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="team-name" aria-label="{{ game.home_team.name }}">{{ game.home_team.name }}</div>
+                                    <div class="team-abbr" aria-label="{{ game.home_team.abbreviation }}">{{ game.home_team.abbreviation }}</div>
+                                </div>
+                                <div class="team-score" aria-label="Home team score: {{ game.home_score }}">{{ game.home_score }}</div>
+                            </div>
+                        </div>
+
+                        <div class="game-actions" role="toolbar" aria-label="Game actions">
+                            <button class="btn btn-sm" aria-label="View game details">Details</button>
+                            <button class="btn btn-sm" aria-label="Follow this game">Follow</button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-games-message" role="status" aria-live="polite">
+                <h3>No Games Scheduled</h3>
+                <p>There are no games scheduled for today or your favorite teams.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.sports-view {
+    padding: 1rem;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.sports-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sports-header h2 {
+    margin: 0;
+    color: var(--text-color);
+}
+
+.sports-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.last-updated {
+    font-size: 0.9rem;
+    color: var(--text-color-secondary);
+}
+
+.sports-filters {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.sports-filters h3 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    color: var(--text-color);
+}
+
+.team-filter-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.team-filter-btn {
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 0.3rem 0.7rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.team-filter-btn:hover {
+    background: var(--accent-color);
+    color: white;
+}
+
+.team-filter-btn.active {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+.games-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.game-card {
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.game-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.game-card.upcoming {
+    border-left: 4px solid var(--accent-color);
+}
+
+.game-card.live {
+    border-left: 4px solid #ff4444;
+    background: rgba(255, 68, 68, 0.05);
+}
+
+.game-card.completed {
+    border-left: 4px solid #888888;
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.game-status-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status {
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.status.scheduled {
+    background: var(--accent-color);
+    color: white;
+}
+
+.status.in_progress {
+    background: #ff4444;
+    color: white;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.status.final {
+    background: #888888;
+    color: white;
+}
+
+.live-clock {
+    background: #ff4444;
+    color: white;
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--border-radius);
+    font-size: 0.8rem;
+}
+
+.game-teams {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.team {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+}
+
+.team.away-team {
+    justify-content: flex-start;
+}
+
+.team.home-team {
+    justify-content: flex-end;
+}
+
+.team-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.team-logo img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.team-initial {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-color);
+    color: white;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.team-name {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.team-abbr {
+    color: var(--text-color-secondary);
+    font-size: 0.9rem;
+}
+
+.team-score {
+    font-size: 2rem;
+    font-weight: bold;
+    min-width: 50px;
+    text-align: center;
+}
+
+.game-center {
+    text-align: center;
+    padding: 0 1rem;
+}
+
+.game-time {
+    font-size: 0.9rem;
+    color: var(--text-color-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.vs {
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: var(--text-color);
+}
+
+.game-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.no-games-message {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-color-secondary);
+}
+
+.no-games-message h3 {
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+}
+
+.sports-content {
+    overflow-y: auto;
+    max-height: calc(100vh - 200px);  /* Adjust based on header height */
+}
+</style>

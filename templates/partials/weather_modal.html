@@ -1,0 +1,240 @@
+{# Weather Forecast Modal #}
+{# Expects: weather (dict with current, hourly, daily keys), active_view ("hourly"|"daily") #}
+
+{% macro weather_icon(condition) %}
+{% set c = condition.lower() %}
+<span class="weather-icon-wrap" title="{{ condition }}" aria-hidden="true">
+{% if 'sunny' in c or 'clear' in c %}
+    <svg class="weather-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"></circle>
+        <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+    </svg>
+{% elif 'partly cloudy' in c %}
+    <svg class="weather-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="2"></circle>
+        <path d="M5 14h9a4 4 0 0 0 0-8 5 5 0 0 0-9 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+    </svg>
+{% elif 'cloudy' in c or 'overcast' in c %}
+    <svg class="weather-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 18h11a4 4 0 0 0 0-8 5 5 0 0 0-9 3 3 3 0 0 0-2 5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+    </svg>
+{% elif 'rain' in c %}
+    <svg class="weather-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 16h11a4 4 0 0 0 0-8 5 5 0 0 0-9 3 3 3 0 0 0-2 5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+        <path d="M9 20l-1 2M13 20l-1 2M17 20l-1 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+    </svg>
+{% elif 'snow' in c %}
+    <svg class="weather-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 16h11a4 4 0 0 0 0-8 5 5 0 0 0-9 3 3 3 0 0 0-2 5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+        <path d="M9 20h0M13 20h0M17 20h0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+    </svg>
+{% elif 'storm' in c or 'thunder' in c %}
+    <svg class="weather-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 15h11a4 4 0 0 0 0-8 5 5 0 0 0-9 3 3 3 0 0 0-2 5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+        <path d="M12 16l-2 4h3l-2 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>
+    </svg>
+{% elif 'fog' in c %}
+    <svg class="weather-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 10h16M6 14h12M5 18h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+    </svg>
+{% else %}
+    <svg class="weather-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"></circle>
+    </svg>
+{% endif %}
+</span>
+{% endmacro %}
+
+{% macro precip_badge(chance, label_class="") %}
+{%- if chance > 0 -%}
+<span class="precip-chance {{ label_class }}">{{ "%.0f"|format(chance) }}%</span>
+{%- endif -%}
+{% endmacro %}
+
+{% macro wind_text(speed, gust) %}
+{%- if gust > 0 and gust > speed + 2 -%}
+{{ "%.0f"|format(speed) }}&ndash;{{ "%.0f"|format(gust) }} mph
+{%- else -%}
+{{ "%.0f"|format(speed) }} mph
+{%- endif -%}
+{% endmacro %}
+
+<div id="weather-modal"
+     class="modal weather-modal"
+     role="dialog"
+     aria-labelledby="weather-modal-title"
+     aria-modal="true"
+     data-modal="weather">
+    <div class="modal-content weather-modal-content" role="document">
+        <div class="modal-header" role="heading" aria-level="2" id="weather-modal-title">
+            <h2 class="modal-title">Forecast</h2>
+            <div>
+                <span class="weather-modal-location">{{ weather.current.location if weather and weather.current and weather.current.location else '' }}</span>
+                <span class="modal-close" aria-label="Close modal" data-action="close-modal">&times;</span>
+            </div>
+        </div>
+
+        {# Tab bar: hx-on:after-settle targets the fresh modal root to re-show it after outerHTML swap #}
+        <div class="weather-tab-bar" role="tablist" aria-label="Forecast view" id="weather-tab-bar"
+             hx-on:htmx:after-settle="document.getElementById('weather-modal')?.classList.add('show')">
+            <button class="weather-tab {% if active_view == 'hourly' %}is-active{% endif %}"
+                    type="button"
+                    role="tab"
+                    aria-selected="{% if active_view == 'hourly' %}true{% else %}false{% endif %}"
+                    aria-controls="weather-hourly-panel"
+                    id="weather-tab-hourly"
+                    hx-get="/partials/weather-modal?view=hourly"
+                    hx-target="#weather-modal"
+                    hx-swap="outerHTML">
+                Hourly
+            </button>
+            <button class="weather-tab {% if active_view == 'daily' %}is-active{% endif %}"
+                    type="button"
+                    role="tab"
+                    aria-selected="{% if active_view == 'daily' %}true{% else %}false{% endif %}"
+                    aria-controls="weather-daily-panel"
+                    id="weather-tab-daily"
+                    hx-get="/partials/weather-modal?view=daily"
+                    hx-target="#weather-modal"
+                    hx-swap="outerHTML">
+                7-Day
+            </button>
+        </div>
+
+        <div class="modal-body weather-modal-body">
+            {% if weather and weather.error %}
+                <div class="weather-error" role="alert">Weather data unavailable: {{ weather.error }}</div>
+            {% elif weather and weather.hourly and weather.daily %}
+                {# ============================================================ #}
+                {# HOURLY TAB                                                    #}
+                {# ============================================================ #}
+                {% if active_view == 'hourly' %}
+                <div id="weather-hourly-panel" role="tabpanel" aria-labelledby="weather-tab-hourly">
+                    {% set hourly_rows = weather.hourly[:24] %}
+                    {% set show_precip_amount = false %}
+                    {% for hour in hourly_rows %}
+                        {% set precip_total = (hour.get('precipitation_in', 0) or 0) + (hour.get('rain_in', 0) or 0) + (hour.get('showers_in', 0) or 0) + (hour.get('snowfall_in', 0) or 0) %}
+                        {% if precip_total > 0.005 %}
+                            {% set show_precip_amount = true %}
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if hourly_rows %}
+                    {# Track previous date-break #}
+                    {% set ns = namespace(prev_md=None) %}
+                    <div class="weather-grid-wrap">
+                        {# Shared column template — thead and tbody use identical grid #}
+                        <div class="weather-hgrid weather-hgrid-header" role="rowgroup">
+                            <div class="weather-hgrid-row weather-hgrid-head-row" role="row">
+                                <div class="hg-col hg-time" role="columnheader">Time</div>
+                                <div class="hg-col hg-cond" role="columnheader">Condition</div>
+                                <div class="hg-col hg-temp" role="columnheader">Temp</div>
+                                <div class="hg-col hg-feels" role="columnheader">Feels</div>
+                                {% if show_precip_amount %}
+                                <div class="hg-col hg-precip" role="columnheader">Precip</div>
+                                {% endif %}
+                                <div class="hg-col hg-wind" role="columnheader">Wind</div>
+                            </div>
+                        </div>
+                        <div class="weather-hgrid weather-hgrid-body" role="rowgroup">
+                            {% for hour in hourly_rows %}
+                            {% set precip_total = (hour.get('precipitation_in', 0) or 0) + (hour.get('rain_in', 0) or 0) + (hour.get('showers_in', 0) or 0) + (hour.get('snowfall_in', 0) or 0) %}
+                            {% set precip_prob = hour.get('precipitation_probability', 0) or 0 %}
+                            {% set wind_speed = hour.get('wind_speed', 0) or 0 %}
+                            {% set wind_gust = hour.get('wind_gust', 0) or 0 %}
+                            {% set feels_like = hour.get('feels_like', hour.get('temperature', 0)) or 0 %}
+                            {% set safe_time = (hour.time|time_12hour_compact if hour.time else '') or '--' %}
+                            {% set date_md = (hour.time|date_m_d if hour.time else '') %}
+                            {% set is_new_date = date_md and date_md != ns.prev_md %}
+                            {% if is_new_date %}
+                                {% set ns.prev_md = date_md %}
+                            {% endif %}
+                            <div class="weather-hgrid-row" role="row">
+                                <div class="hg-col hg-time" role="cell">
+                                    {% if is_new_date %}<span class="hourly-date-break">{{ date_md }}</span>{% endif %}
+                                    <span class="hourly-time-val">{{ safe_time }}</span>
+                                </div>
+                                <div class="hg-col hg-cond" role="cell">
+                                    <span class="cond-icon-wrap">{{ weather_icon(hour.condition) }}</span>
+                                    <span class="cond-text">{{ hour.condition }}</span>
+                                    {{ precip_badge(precip_prob) }}
+                                </div>
+                                <div class="hg-col hg-temp" role="cell">{{ "%.0f"|format(hour.temperature) }}&deg;</div>
+                                <div class="hg-col hg-feels" role="cell">{{ "%.0f"|format(feels_like) }}&deg;</div>
+                                {% if show_precip_amount %}
+                                <div class="hg-col hg-precip" role="cell">{% if precip_total > 0.005 %}{{ "%.2f"|format(precip_total) }} in{% else %}--{% endif %}</div>
+                                {% endif %}
+                                <div class="hg-col hg-wind" role="cell">{{ wind_text(wind_speed, wind_gust) }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="weather-empty">No hourly forecast data available.</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {# ============================================================ #}
+                {# DAILY TAB                                                     #}
+                {# ============================================================ #}
+                {% if active_view == 'daily' %}
+                <div id="weather-daily-panel" role="tabpanel" aria-labelledby="weather-tab-daily">
+                    {% set daily_rows = weather.daily[:7] %}
+                    {% if daily_rows %}
+                    {% set day_highs = daily_rows | map(attribute='high') | list %}
+                    {% set day_lows = daily_rows | map(attribute='low') | list %}
+                    {% set range_min = day_lows | min if day_lows else 0 %}
+                    {% set range_max = day_highs | max if day_highs else 1 %}
+                    {% set range_span = (range_max - range_min) if (range_max - range_min) > 0 else 1 %}
+
+                    <div class="weather-grid-wrap weather-dgrid-wrap">
+                        {# Daily CSS grid #}
+                        <div class="weather-dgrid weather-dgrid-header" role="rowgroup">
+                            <div class="weather-dgrid-row weather-dgrid-head-row" role="row">
+                                <div class="dg-col dg-day" role="columnheader">Day</div>
+                                <div class="dg-col dg-cond" role="columnheader">Conditions</div>
+                                <div class="dg-col dg-low" role="columnheader">Low</div>
+                                <div class="dg-col dg-range" role="columnheader"></div>
+                                <div class="dg-col dg-high" role="columnheader">High</div>
+                                <div class="dg-col dg-wind" role="columnheader">Wind</div>
+                            </div>
+                        </div>
+                        <div class="weather-dgrid weather-dgrid-body" role="rowgroup">
+                            {% for day in daily_rows %}
+                            {% set day_name = (day.date | day_of_week) if day.date else '--' %}
+                            {% set precip_prob = day.get('max_precip_probability', 0) or 0 %}
+                            {% set max_wind = day.get('max_wind_speed', 0) or 0 %}
+                            {% set max_gust = day.get('max_wind_gust', 0) or 0 %}
+                            {% set bar_start = (((day.low - range_min) / range_span) * 100) %}
+                            {% set bar_width = ((((day.high - day.low) / range_span) * 100)) %}
+                            <div class="weather-dgrid-row" role="row">
+                                <div class="dg-col dg-day" role="cell">{{ day_name }}</div>
+                                <div class="dg-col dg-cond" role="cell">
+                                    <span class="cond-icon-wrap">{{ weather_icon(day.condition) }}</span>
+                                    <span class="cond-text">{{ day.condition }}</span>
+                                    {{ precip_badge(precip_prob) }}
+                                </div>
+                                <div class="dg-col dg-low" role="cell">{{ "%.0f"|format(day.low) }}&deg;</div>
+                                <div class="dg-col dg-range" role="cell">
+                                    <span class="daily-range-bar" aria-hidden="true">
+                                        <span class="daily-range-fill" style="left: {{ bar_start }}%; width: {{ bar_width }}%;"></span>
+                                    </span>
+                                </div>
+                                <div class="dg-col dg-high" role="cell">{{ "%.0f"|format(day.high) }}&deg;</div>
+                                <div class="dg-col dg-wind" role="cell">{% if max_wind > 0 %}{{ wind_text(max_wind, max_gust) }}{% endif %}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="weather-empty">No daily forecast data available.</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            {% else %}
+                <div class="weather-empty">Weather data is not available at this time.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>

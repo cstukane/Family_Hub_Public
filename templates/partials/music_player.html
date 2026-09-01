@@ -1,0 +1,68 @@
+<div class="panel music-fragment" role="region" aria-labelledby="music-player-title">
+    <div class="panel-header" role="heading" aria-level="2" id="music-player-title">
+        <h2 class="panel-title">Music Player</h2>
+    </div>
+    
+    <div id="music-player-container" class="music-player-container" role="application" aria-label="Music player">
+        <div class="current-track" role="complementary" aria-label="Currently playing track">
+            <div id="now-playing-info">
+                <img id="album-art" src="" alt="Album art" style="width: 100px; height: 100px; display:none;">
+                <div id="track-details">
+                    <h3 id="current-track-title">No track playing</h3>
+                    <p id="current-track-artist">-</p>
+                    <p id="current-track-album">-</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="player-controls" role="toolbar" aria-label="Music player controls">
+            <button id="prev-track-btn" class="btn btn-sm" aria-label="Previous track">
+                
+            </button>
+            <button id="play-btn" class="btn btn-sm" aria-label="Play music">
+                
+            </button>
+            <button id="pause-btn" class="btn btn-sm" style="display:none;" aria-label="Pause music">
+                
+            </button>
+            <button id="next-track-btn" class="btn btn-sm" aria-label="Next track">
+                
+            </button>
+        </div>
+        
+        <div class="progress-container" role="progressbar" aria-label="Playback progress">
+            <input type="range" id="progress-bar" min="0" max="100" value="0" style="width: 100%;">
+            <div class="time-info">
+                <span id="current-time">0:00</span> / <span id="track-duration">0:00</span>
+            </div>
+        </div>
+        
+        <div class="volume-control" role="slider" aria-label="Volume control">
+            <label for="volume-slider">Volume: </label>
+            <input type="range" id="volume-slider" min="0" max="100" value="70" style="width: 150px;">
+            <span id="volume-value">70%</span>
+        </div>
+    </div>
+    
+    <div class="playlists" role="complementary" aria-label="Playlists">
+        <h3>Playlists</h3>
+        <div id="playlists-list" hx-get="/api/music/playlists" hx-trigger="load" hx-swap="innerHTML">
+            Loading playlists...
+        </div>
+    </div>
+    
+    <div class="queue" role="complementary" aria-label="Music queue">
+        <h3>Queue</h3>
+        <div id="queue-list" hx-get="/api/music/queues" hx-trigger="load" hx-swap="innerHTML">
+            Loading queue...
+        </div>
+    </div>
+    
+    <div class="recent-tracks" role="complementary" aria-label="Recent tracks">
+        <h3>Recent Tracks</h3>
+        <div id="recent-tracks-list" hx-get="/api/music/tracks?limit=5" hx-trigger="load" hx-swap="innerHTML">
+            Loading recent tracks...
+        </div>
+    </div>
+</div>
+

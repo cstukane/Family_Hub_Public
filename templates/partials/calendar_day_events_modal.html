@@ -1,0 +1,71 @@
+﻿<div id="calendar-day-events-modal" class="modal" role="dialog" aria-labelledby="day-events-modal-title"
+    aria-modal="true" data-modal="calendar-day-events">
+    <div class="modal-content" role="document">
+        <div class="modal-header" role="heading" aria-level="2" id="day-events-modal-title">
+            <h2 class="modal-title">{{ target_date.strftime('%A, %B %d') }}</h2>
+            <span class="modal-close" aria-label="Close modal" data-action="close-modal">&times;</span>
+        </div>
+
+        <div class="modal-body" id="day-events-modal-body" role="document">
+            <div class="day-events-list" role="list"
+                aria-label="Detailed events list for {{ target_date.strftime('%B %d') }}">
+                {% for event in events %}
+                {% set ns = namespace(owner_color=None) %}
+                {% set ev_owner = event.owner | string if event.owner else '' %}
+                {% if config and config.family %}
+                {% for member in config.family %}
+                {% if member.name == ev_owner or (ev_owner and member.emails and ev_owner in member.emails) %}
+                {% set ns.owner_color = member.color %}
+                {% endif %}
+                {% endfor %}
+                {% endif %}
+                {% set owner_color = ns.owner_color %}
+
+                {% set border_color = owner_color if owner_color else 'var(--border-color)' %}
+                {% set text_color = owner_color if owner_color else 'var(--text-color)' %}
+                {% set event_time = event.starts_at | convert_to_timezone | time_12hour if event.starts_at else 'All
+                Day' %}
+                {% set end_time = event.ends_at | convert_to_timezone | time_12hour if (event.ends_at and not
+                event.all_day) else '' %}
+
+                <div class="event-detail-item"
+                    style="border-left: 6px solid {{ border_color }}; padding: var(--spacing-sm) var(--spacing-md); margin-bottom: var(--spacing-md); background-color: rgba(0, 0, 0, 0.02); border-radius: 0 var(--border-radius) var(--border-radius) 0;">
+                    <div class="event-time"
+                        style="font-weight: 700; font-size: var(--font-size-base); margin-bottom: 2px;">
+                        {{ event_time }}{% if end_time %} - {{ end_time }}{% endif %}
+                    </div>
+                    <div class="event-title"
+                        style="font-size: var(--font-size-large); font-weight: 600; margin-bottom: 4px;">
+                        {{ event.title }}
+                    </div>
+                    {% if event.owner %}
+                    <div class="event-owner"
+                        style="font-weight: 600; font-size: var(--font-size-small); color: {{ text_color }}; margin-bottom: 2px;">
+                        Owner: {{ event.owner }}
+                    </div>
+                    {% endif %}
+                    {% if event.location %}
+                    <div class="event-location"
+                        style="font-size: var(--font-size-small); color: var(--text-color-secondary);">
+                        {{ event.location }}
+                    </div>
+                    {% endif %}
+                    {% if event.description %}
+                    <div class="event-description"
+                        style="margin-top: var(--spacing-xs); font-size: var(--font-size-small); white-space: pre-wrap;">
+                        {{ event.description }}</div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="no-events">No events scheduled for this day.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn" data-action="close-modal" aria-label="Close modal">
+                Close
+            </button>
+        </div>
+    </div>
+</div>

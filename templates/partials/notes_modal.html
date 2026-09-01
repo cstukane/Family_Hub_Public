@@ -1,0 +1,53 @@
+<div id="notes-modal"
+     class="modal"
+     role="dialog"
+     aria-labelledby="notes-modal-title"
+     aria-modal="true"
+     data-modal="notes">
+    <div class="modal-content" role="document">
+        <div class="modal-header" role="heading" aria-level="2" id="notes-modal-title">
+            <h2 class="modal-title">Notes</h2>
+            <div>
+                <span class="item-count" id="notes-count">({{ notes|length if notes else 0 }})</span>
+                <span class="modal-close" aria-label="Close modal" data-action="close-modal">&times;</span>
+            </div>
+        </div>
+        
+        <div class="modal-body" id="notes-modal-body" role="document">
+            <form id="add-note-form-modal" 
+                  hx-post="/api/notes" 
+                  hx-target="#notes-list-modal" 
+                  hx-swap="afterbegin"
+                  hx-on:htmx:afterSwap="this.reset(); if (typeof refreshNotesCount === 'function') { refreshNotesCount(); }"
+                  role="form"
+                  aria-label="Add new note in modal">
+                <div class="form-group">
+                    <label for="add-note-text-modal" class="sr-only">Note Content</label>
+                    <textarea id="add-note-text-modal" name="text" class="form-control" placeholder="Add a note..." required aria-label="Enter your note text in modal"></textarea>
+                </div>
+                <button type="submit" class="btn btn-block" aria-label="Add note to list in modal">Add Note</button>
+            </form>
+            
+            <div id="notes-container-modal" role="region" aria-label="Notes list in modal">
+                <ul id="notes-list-modal" class="list-group" role="list" aria-label="List of notes in modal">
+                    {% if notes %}
+                        {% for note in notes %}
+                            {% include 'partials/_note_modal_item.html' %}
+                        {% endfor %}
+                    {% else %}
+                        <li class="list-group-item" data-empty-state="notes" role="listitem" aria-label="No notes available">No notes yet</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button type="button"
+                    class="btn"
+                    data-action="close-modal"
+                    aria-label="Close modal">
+                Close
+            </button>
+        </div>
+    </div>
+</div>

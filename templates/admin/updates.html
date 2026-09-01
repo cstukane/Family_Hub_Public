@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ config.ui.theme if config and config.ui.theme else 'auto' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Updates - Kitchen Hub</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <script src="https://unpkg.com/htmx.org@1.8.4"></script>
+    <style>
+        .admin-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            grid-template-rows: auto 1fr;
+            min-height: 100vh;
+        }
+        
+        .admin-sidebar {
+            grid-column: 1 / 2;
+            grid-row: 2 / 3;
+            background-color: var(--surface-color);
+            border-right: 1px solid var(--border-color);
+            padding: 1rem;
+        }
+        
+        .admin-content {
+            grid-column: 2 / 3;
+            grid-row: 2 / 3;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        
+        .admin-header {
+            grid-column: 1 / -1;
+            grid-row: 1 / 2;
+            background-color: var(--surface-color);
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .admin-nav {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .admin-nav li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .admin-nav a {
+            display: block;
+            padding: 0.75rem;
+            text-decoration: none;
+            color: var(--text-color);
+            border-radius: var(--border-radius);
+            transition: background-color 0.2s;
+        }
+        
+        .admin-nav a:hover {
+            background-color: color-mix(in srgb, var(--primary-color) 20%, transparent);
+        }
+        
+        .admin-nav a.active {
+            background-color: color-mix(in srgb, var(--primary-color) 30%, transparent);
+        }
+        
+        .admin-logout {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .admin-panel-title {
+            margin-bottom: 1.5rem;
+            color: var(--text-color);
+        }
+        
+        .admin-card {
+            background: var(--background-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+        
+        .admin-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .admin-card-title {
+            margin: 0;
+            font-size: var(--font-size-large);
+        }
+        
+        .update-actions {
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        
+        .status-good {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .status-warning {
+            background-color: var(--warning-color);
+            color: white;
+        }
+        
+        .status-error {
+            background-color: var(--error-color);
+            color: white;
+        }
+        
+        .update-item {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .update-item:last-child {
+            border-bottom: none;
+        }
+        
+        .admin-btn {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: var(--border-radius);
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .admin-btn:hover {
+            opacity: 0.9;
+        }
+        
+        .admin-btn-danger {
+            background-color: var(--error-color);
+        }
+        
+        .admin-btn-success {
+            background-color: var(--success-color);
+        }
+        
+        .admin-btn-warning {
+            background-color: var(--warning-color);
+        }
+        
+        .update-details {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background-color: var(--surface-color);
+            border-radius: var(--border-radius);
+            font-size: 0.9rem;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-color);
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 1rem;
+        }
+        
+        .alert-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .alert-error {
+            background-color: var(--error-color);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Admin header -->
+        <header class="admin-header">
+            <h1>Kitchen Hub Admin Panel</h1>
+            <button id="logoutBtn" class="admin-btn admin-btn-danger">Logout</button>
+        </header>
+        
+        <!-- Admin sidebar -->
+        <aside class="admin-sidebar">
+            <ul class="admin-nav">
+                <li><a href="/admin">Dashboard</a></li>
+                <li><a href="/admin/config">Configuration</a></li>
+                <li><a href="/admin/system">System Info</a></li>
+                <li><a href="/admin/diagnostics">Diagnostics</a></li>
+                <li><a href="/admin/backup">Backups</a></li>
+                <li><a href="/admin/updates" class="active">Updates</a></li>
+                <li><a href="/">← Back to Dashboard</a></li>
+            </ul>
+            
+            <div class="admin-logout">
+                <button id="logoutBtnSidebar" class="admin-btn admin-btn-danger btn-block">Logout</button>
+            </div>
+        </aside>
+        
+        <!-- Admin content -->
+        <main class="admin-content">
+            <h2 class="admin-panel-title">System Updates</h2>
+            
+            <div id="alertMessage" class="alert" style="display: none;"></div>
+            
+            <div class="update-actions">
+                <button id="checkForUpdates" class="admin-btn admin-btn-info">Check for Updates</button>
+                <button id="performUpdate" class="admin-btn admin-btn-success">Apply Updates</button>
+                <button id="rollbackUpdate" class="admin-btn admin-btn-warning">Rollback Last Update</button>
+            </div>
+            
+            <!-- Current version info -->
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h3 class="admin-card-title">Current Version</h3>
+                </div>
+                <div id="currentVersionInfo">
+                    <p>Loading version information...</p>
+                </div>
+            </div>
+            
+            <!-- Available updates -->
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h3 class="admin-card-title">Available Updates</h3>
+                </div>
+                <div id="availableUpdates">
+                    <p>Click "Check for Updates" to see available updates.</p>
+                </div>
+            </div>
+            
+            <!-- Update history -->
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h3 class="admin-card-title">Update History</h3>
+                </div>
+                <div id="updateHistory">
+                    <p>Loading update history...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        // Logout functionality
+        function logout() {
+            fetch('/api/admin/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                window.location.href = '/admin/login';
+            })
+            .catch(error => {
+                console.error('Logout error:', error);
+                window.location.href = '/admin/login';
+            });
+        }
+        
+        // Add event listeners to logout buttons
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+        document.getElementById('logoutBtnSidebar').addEventListener('click', logout);
+        
+        // Check for updates
+        document.getElementById('checkForUpdates').addEventListener('click', function() {
+            document.getElementById('availableUpdates').innerHTML = '<div class="loading">Checking for updates...</div>';
+            
+            fetch('/api/admin/updates/check')
+                .then(response => response.json())
+                .then(data => {
+                    displayUpdates(data);
+                })
+                .catch(error => {
+                    console.error('Check updates error:', error);
+                    document.getElementById('availableUpdates').innerHTML = 
+                        '<p class="alert alert-error">Error checking for updates: ' + error + '</p>';
+                });
+        });
+        
+        // Perform update
+        document.getElementById('performUpdate').addEventListener('click', function() {
+            if (confirm('Are you sure you want to apply updates? This may restart the application.')) {
+                document.getElementById('availableUpdates').innerHTML = '<div class="loading">Applying updates...</div>';
+                
+                fetch('/api/admin/updates', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ type: 'latest' })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    showNotification('Update applied: ' + data.message, 'success');
+                    // Refresh version info after update
+                    loadVersionInfo();
+                })
+                .catch(error => {
+                    console.error('Perform update error:', error);
+                    showNotification('Error applying update: ' + error, 'error');
+                });
+            }
+        });
+        
+        // Rollback update
+        document.getElementById('rollbackUpdate').addEventListener('click', function() {
+            if (confirm('Are you sure you want to rollback the last update? This may restart the application.')) {
+                fetch('/api/admin/updates/rollback', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        showNotification('Rollback completed: ' + data.message, 'success');
+                    })
+                    .catch(error => {
+                        console.error('Rollback update error:', error);
+                        showNotification('Error during rollback: ' + error, 'error');
+                    });
+            }
+        });
+        
+        // Load version info (this is a simulated version since we don't have a real version API)
+        function loadVersionInfo() {
+            // In a real implementation, this would fetch from an API
+            const versionInfo = document.getElementById('currentVersionInfo');
+            versionInfo.innerHTML = `
+                <p><strong>Current Version:</strong> <span id="currentVersion">0.1.0</span></p>
+                <p><strong>Last Check:</strong> <span id="lastCheck">${new Date().toISOString()}</span></p>
+            `;
+        }
+        
+        // Display updates
+        function displayUpdates(data) {
+            const container = document.getElementById('availableUpdates');
+            
+            if (data.has_updates) {
+                let html = '<ul class="list-group">';
+                data.updates.forEach(update => {
+                    html += `
+                        <li class="update-item">
+                            <strong>${update.version}:</strong> ${update.description}
+                            <div class="update-details">
+                                <p><strong>Date:</strong> ${update.date}</p>
+                                <p><strong>Type:</strong> ${update.type}</p>
+                            </div>
+                        </li>
+                    `;
+                });
+                html += '</ul>';
+                container.innerHTML = html;
+            } else if (data.current_version && data.latest_version) {
+                if (data.current_version === data.latest_version) {
+                    container.innerHTML = `
+                        <div class="update-item">
+                            <p>Your system is up to date.</p>
+                            <p><strong>Current version:</strong> ${data.current_version}</p>
+                            <p><strong>Latest version:</strong> ${data.latest_version}</p>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <div class="update-item">
+                            <p>No updates are currently available, but there may be newer versions in development.</p>
+                            <p><strong>Current version:</strong> ${data.current_version}</p>
+                            <p><strong>Latest version:</strong> ${data.latest_version}</p>
+                        </div>
+                    `;
+                }
+            } else {
+                container.innerHTML = '<p>No updates found or error retrieving update information.</p>';
+            }
+        }
+        
+        // Load update history
+        function loadUpdateHistory() {
+            fetch('/api/admin/updates/history')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('updateHistory');
+                    
+                    if (data.history && data.history.length > 0) {
+                        let html = '<ul class="list-group">';
+                        data.history.forEach(update => {
+                            html += `
+                                <li class="update-item">
+                                    <strong>${update.version}:</strong> Applied on ${update.date}
+                                    <div class="update-details">
+                                        ${update.description}
+                                    </div>
+                                </li>
+                            `;
+                        });
+                        html += '</ul>';
+                        container.innerHTML = html;
+                    } else {
+                        container.innerHTML = '<p>No update history available.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Load update history error:', error);
+                    document.getElementById('updateHistory').innerHTML = 
+                        '<p class="alert alert-error">Error loading update history: ' + error + '</p>';
+                });
+        }
+        
+        // Show notification
+        function showNotification(message, type) {
+            const alertElement = document.getElementById('alertMessage');
+            alertElement.textContent = message;
+            alertElement.className = `alert alert-${type}`;
+            alertElement.style.display = 'block';
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                alertElement.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Load initial data when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadVersionInfo();
+            loadUpdateHistory();
+        });
+    </script>
+</body>
+</html>

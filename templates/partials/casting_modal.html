@@ -1,0 +1,29 @@
+<div id="casting-modal"
+     class="modal"
+     role="dialog"
+     aria-labelledby="casting-modal-title"
+     aria-modal="true"
+     data-modal="casting"
+     data-modal-init="initCastingModal">
+    <div class="modal-content" role="document">
+        <div class="modal-header" role="heading" aria-level="2" id="casting-modal-title">
+            <h2 class="modal-title">Casting Devices</h2>
+            <span class="modal-close" aria-label="Close modal" data-action="close-modal">&times;</span>
+        </div>
+
+        <div class="modal-body">
+            <div class="casting-panel" id="casting-panel">
+                <div class="casting-controls">
+                    <button type="button"
+                            class="btn btn-primary"
+                            data-action="casting-discover">
+                        Discover Devices
+                    </button>
+                </div>
+                <div id="casting-devices-list" class="mt-3">
+                    <p class="text-muted">Searching for casting devices...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

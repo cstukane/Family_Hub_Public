@@ -1,0 +1,1014 @@
+<section class="settings-view" role="region" aria-labelledby="settings-heading" aria-describedby="settings-shortcuts-hint">
+    <div class="settings-skip-links" aria-label="Settings skip links">
+        <a class="settings-skip-link" href="#settings-tab-preferences" data-tab="preferences">Skip to preferences</a>
+        <a class="settings-skip-link" href="#favorite-teams-form" data-tab="preferences">Skip to favorite teams</a>
+        <a class="settings-skip-link" href="#cache-management" data-tab="preferences">Skip to cache management</a>
+        <a class="settings-skip-link" href="#settings-tab-status" data-tab="status">Skip to system status</a>
+    </div>
+    <p id="settings-shortcuts-hint" class="sr-only">
+        Keyboard shortcuts: Alt+Shift+1 Preferences, Alt+Shift+2 System Status, Alt+Shift+S Save favorites,
+        Alt+Shift+C Clear favorites, Alt+Shift+R Refresh sports ticker, Alt+Shift+F Focus team filter.
+    </p>
+    <header class="settings-header">
+        <h1 id="settings-heading">Family Hub Settings</h1>
+        <p class="settings-subtitle">
+            Choose your favorite teams to personalize the sports ticker.
+            Selected teams will always surface their next scheduled game, even if it is days away.
+        </p>
+    </header>
+
+    <div class="settings-tabs" role="tablist" aria-label="Settings sections">
+        <button class="settings-tab-btn active" id="settings-tab-btn-preferences" data-tab="preferences" role="tab"
+            aria-controls="settings-tab-preferences" aria-selected="true" tabindex="0">
+            Preferences
+        </button>
+        <button class="settings-tab-btn" id="settings-tab-btn-status" data-tab="status" role="tab"
+            aria-controls="settings-tab-status" aria-selected="false" tabindex="-1">
+            System Status
+        </button>
+    </div>
+
+    <div id="settings-tab-preferences" class="settings-tab-content active-content" role="tabpanel"
+        aria-labelledby="settings-tab-btn-preferences" tabindex="-1">
+        <div class="settings-card" aria-describedby="settings-description">
+            <h2 id="sports-ticker-heading" data-settings-focus>Sports Ticker Settings</h2>
+            <div class="toggle-group" role="group" aria-labelledby="sports-ticker-heading">
+                <label class="toggle-label">
+                    <input type="checkbox" id="sports-ticker-enabled" class="toggle-checkbox" {{ 'checked' if
+                        config.features.sports_ticker_enabled|default(true) else '' }}>
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-text">Enable Sports Ticker</span>
+                </label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="sports-ticker-mock-mode" class="toggle-checkbox" {{ 'checked' if
+                        config.features.sports_ticker_mock_mode|default(false) else '' }}>
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-text">Mock Mode (Show Sample Data)</span>
+                </label>
+            </div>
+            <div class="settings-actions">
+                <button type="button" class="btn btn-secondary" id="sports-ticker-refresh"
+                    aria-label="Refresh sports ticker">
+                    Refresh Sports Ticker
+                </button>
+            </div>
+        </div>
+
+        {% set burn_in = config.ui.burn_in if config and config.ui and config.ui.burn_in else {} %}
+        <div class="settings-card">
+            <h2 id="burn-in-heading">Burn-In Mitigation</h2>
+            <p class="settings-description">
+                Apply subtle screen shifts and dimming to reduce static burn-in on the TV.
+            </p>
+            <div class="toggle-group" role="group" aria-labelledby="burn-in-heading">
+                <label class="toggle-label">
+                    <input type="checkbox" id="burn-in-enabled" class="toggle-checkbox" {{ 'checked' if
+                        burn_in.enabled|default(false) else '' }}>
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-text">Enable Burn-In Mitigation</span>
+                </label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="burn-in-shift-enabled" class="toggle-checkbox" {{ 'checked' if
+                        burn_in.shift_enabled|default(true) else '' }}>
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-text">Screen Shift</span>
+                </label>
+                <label class="toggle-label">
+                    <input type="checkbox" id="burn-in-dim-enabled" class="toggle-checkbox" {{ 'checked' if
+                        burn_in.dim_enabled|default(true) else '' }}>
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-text">Dim When Idle</span>
+                </label>
+            </div>
+            <div class="settings-form-grid">
+                <label class="settings-field">
+                    <span class="settings-field-label">Shift range (px)</span>
+                    <input type="number" id="burn-in-shift-range" min="4" max="40" step="1"
+                        value="{{ burn_in.shift_range_px|default(12) }}">
+                </label>
+                <label class="settings-field">
+                    <span class="settings-field-label">Shift interval (min)</span>
+                    <input type="number" id="burn-in-shift-interval" min="1" max="30" step="1"
+                        value="{{ ((burn_in.shift_interval_seconds|default(180)) / 60) | int }}">
+                </label>
+                <label class="settings-field">
+                    <span class="settings-field-label">Dim after idle (min)</span>
+                    <input type="number" id="burn-in-dim-idle" min="1" max="60" step="1"
+                        value="{{ ((burn_in.dim_idle_seconds|default(300)) / 60) | int }}">
+                </label>
+                <label class="settings-field">
+                    <span class="settings-field-label">Dim level (%)</span>
+                    <input type="number" id="burn-in-dim-level" min="30" max="100" step="5"
+                        value="{{ ((burn_in.dim_level|default(0.6)) * 100) | int }}">
+                </label>
+            </div>
+            <div class="settings-actions">
+                <button type="button" class="btn btn-secondary" id="burn-in-apply">
+                    Save Burn-In Settings
+                </button>
+            </div>
+        </div>
+
+        <form id="favorite-teams-form" class="settings-card" aria-describedby="settings-description" tabindex="-1">
+            <h2 id="favorite-teams-heading">Favorite Teams</h2>
+            <p id="settings-description" class="settings-description">
+                Expand a league, browse or search for teams, and use the checkboxes to follow them.
+                Your selections apply to both the sports view and the horizontal ticker.
+            </p>
+
+            {% set favorites_lower = (favorite_teams or []) | map('lower') | list %}
+
+            <div class="league-groups">
+                {% for league_id, league in team_catalog.items() %}
+                {% set league_name = league.name %}
+                {% set teams = league.teams %}
+                {% set temp = namespace(count=0) %}
+                {% for team in teams %}
+                {% set team_aliases = (team.aliases + [team.value]) | map('lower') | list %}
+                {% set team_selection = namespace(selected=False) %}
+                {% for alias in team_aliases %}
+                {% if alias in favorites_lower %}
+                {% set team_selection.selected = True %}
+                {% endif %}
+                {% endfor %}
+                {% if team_selection.selected %}
+                {% set temp.count = temp.count + 1 %}
+                {% endif %}
+                {% endfor %}
+
+                <details class="league-group" data-league="{{ league_id }}">
+                    <summary>
+                        <span class="league-name">{{ league_name }}</span>
+                        <span class="league-count" data-count-for="{{ league_id }}">
+                            {% if temp.count %}
+                            {{ temp.count }} selected
+                            {% else %}
+                            No teams selected
+                            {% endif %}
+                        </span>
+                    </summary>
+                    <div class="league-body">
+                        <label class="search-label" for="filter-{{ league_id }}">Filter teams</label>
+                        <span id="filter-{{ league_id }}-hint" class="sr-only">
+                            Type to filter teams. Press Escape to clear.
+                        </span>
+                        <input type="search" id="filter-{{ league_id }}" class="league-filter"
+                            placeholder="Search {{ league_name }} teams" data-league-filter="{{ league_id }}"
+                            aria-label="Filter {{ league_name }} teams"
+                            aria-describedby="filter-{{ league_id }}-hint"
+                            aria-controls="league-{{ league_id }}-teams" />
+                        <div class="team-grid" id="league-{{ league_id }}-teams" data-league-teams="{{ league_id }}">
+                            {% for team in teams %}
+                            {% set ns = namespace(checked=False) %}
+                            {% set team_aliases = (team.aliases + [team.value]) | map('lower') | list %}
+                            {% for alias in team_aliases %}
+                            {% if alias in favorites_lower %}
+                            {% set ns.checked = True %}
+                            {% endif %}
+                            {% endfor %}
+                            <label class="team-option" data-team-name="{{ team.label | lower }}">
+                                <input type="checkbox" class="favorite-team-checkbox" name="favorite_teams"
+                                    value="{{ team.value }}" data-league="{{ league_id }}" {% if ns.checked %}checked{%
+                                    endif %} aria-label="Follow {{ team.label }}">
+                                <span class="team-label">
+                                    {{ team.label }}
+                                    <span class="team-abbr">{{ team.abbreviation }}</span>
+                                </span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </details>
+                {% endfor %}
+            </div>
+
+            <div class="settings-actions">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <button type="button" class="btn" id="clear-selection-btn">Clear All</button>
+            </div>
+        </form>
+
+        <div class="settings-card" id="cache-management" tabindex="-1">
+            <h2 id="cache-management-heading">Cache & App Management</h2>
+            <div class="cache-actions">
+                <button type="button" class="btn btn-secondary" id="clear-weather-cache">Clear Weather Cache</button>
+                <button type="button" class="btn btn-secondary" id="clear-sports-cache">Clear Sports Cache</button>
+                <button type="button" class="btn btn-secondary" id="clear-calendar-cache">Clear Calendar Cache</button>
+                <button type="button" class="btn btn-secondary" id="clear-all-cache">Clear All Caches</button>
+            </div>
+            <div class="app-actions" style="margin-top: 1rem;">
+                <button type="button" class="btn btn-warning" id="restart-app">Restart Application</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-tab-status" class="settings-tab-content" role="tabpanel"
+        aria-labelledby="settings-tab-btn-status" tabindex="-1" hidden>
+        <div class="status-grid">
+            <section class="settings-card">
+                <h2 id="application-info-heading" data-settings-focus>Application Info</h2>
+                <div class="metrics-display">
+                    <div class="metric-item"><span class="metric-label">Version</span><span class="metric-value">{{
+                            status_data.application_info.version }}</span></div>
+                    <div class="metric-item"><span class="metric-label">Uptime</span><span class="metric-value">{{
+                            (status_data.application_info.uptime_seconds / 3600) | round(2) }}h</span></div>
+                </div>
+            </section>
+
+            <section class="settings-card">
+                <h2>System Health</h2>
+                <div class="metrics-display">
+                    <div class="metric-item">
+                        <span class="metric-label">Database</span>
+                        <span
+                            class="status-badge {% if status_data.system_health.database_connection %}status-good{% else %}status-bad{% endif %}">
+                            {% if status_data.system_health.database_connection %}OK{% else %}ERROR{% endif %}
+                        </span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="metric-label">Scheduler</span>
+                        <span
+                            class="status-badge {% if status_data.system_health.scheduler_running %}status-good{% else %}status-bad{% endif %}">
+                            {% if status_data.system_health.scheduler_running %}Active{% else %}Inactive{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <section class="settings-card">
+            <h2>Performance Metrics</h2>
+            <div class="metrics-display" id="settings-metrics-display">
+                <div class="metric-item"><span class="metric-label">Memory</span><span class="metric-value"
+                        id="memory-mb-val">...</span><span class="metric-unit">MB</span></div>
+                <div class="metric-item"><span class="metric-label">Photos</span><span class="metric-value"
+                        id="photo-count-val">...</span></div>
+                <div class="metric-item"><span class="metric-label">Ticker Games</span><span class="metric-value"
+                        id="ticker-game-count-val">...</span></div>
+            </div>
+        </section>
+
+        <section class="settings-card">
+            <h2>Response Times (ms)</h2>
+            <div class="chart-container" style="height: 200px;">
+                <canvas id="settingsResponseTimeChart"></canvas>
+            </div>
+        </section>
+    </div>
+
+    <div id="favorite-teams-status" class="settings-status" role="status" aria-live="polite"></div>
+</section>
+
+<script>
+    (function () {
+        const favoritesForm = document.getElementById('favorite-teams-form');
+        const statusNode = document.getElementById('favorite-teams-status');
+
+        const updateLeagueCounts = () => {
+            document.querySelectorAll('.league-group').forEach(group => {
+                const leagueId = group.getAttribute('data-league');
+                const checkboxes = group.querySelectorAll('input.favorite-team-checkbox');
+                const selected = Array.from(checkboxes).filter(cb => cb.checked).length;
+                const counter = group.querySelector(`[data-count-for="${leagueId}"]`);
+                if (counter) {
+                    counter.textContent = selected ? `${selected} selected` : 'No teams selected';
+                }
+            });
+        };
+
+        const applyFilter = (leagueId, value) => {
+            const normalized = value.trim().toLowerCase();
+            const teamNodes = document.querySelectorAll(`[data-league-teams="${leagueId}"] .team-option`);
+            teamNodes.forEach(node => {
+                const label = node.getAttribute('data-team-name');
+                node.hidden = normalized.length > 0 && !label.includes(normalized);
+            });
+        };
+
+        const gatherSelections = () => {
+            return Array.from(document.querySelectorAll('.favorite-team-checkbox:checked'))
+                .map(cb => cb.value);
+        };
+
+        const tabButtons = Array.from(document.querySelectorAll('.settings-tab-btn'));
+        const setActiveTab = (tab, options = {}) => {
+            tabButtons.forEach(button => {
+                const isActive = button.getAttribute('data-tab') === tab;
+                button.classList.toggle('active', isActive);
+                button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                button.setAttribute('tabindex', isActive ? '0' : '-1');
+            });
+
+            document.querySelectorAll('.settings-tab-content').forEach(panel => {
+                const isActive = panel.id === `settings-tab-${tab}`;
+                panel.classList.toggle('active-content', isActive);
+                panel.hidden = !isActive;
+                if (isActive && options.focusPanel) {
+                    const focusTarget = panel.querySelector('[data-settings-focus]') || panel;
+                    focusTarget.setAttribute('tabindex', '-1');
+                    focusTarget.focus();
+                }
+            });
+
+            if (tab === 'status') {
+                initStatusCharts();
+            }
+        };
+
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                setActiveTab(btn.getAttribute('data-tab'));
+            });
+
+            btn.addEventListener('keydown', (event) => {
+                const currentIndex = tabButtons.indexOf(btn);
+                if (event.key === 'ArrowRight') {
+                    event.preventDefault();
+                    const nextIndex = (currentIndex + 1) % tabButtons.length;
+                    tabButtons[nextIndex].focus();
+                }
+                if (event.key === 'ArrowLeft') {
+                    event.preventDefault();
+                    const prevIndex = (currentIndex - 1 + tabButtons.length) % tabButtons.length;
+                    tabButtons[prevIndex].focus();
+                }
+                if (event.key === 'Home') {
+                    event.preventDefault();
+                    tabButtons[0].focus();
+                }
+                if (event.key === 'End') {
+                    event.preventDefault();
+                    tabButtons[tabButtons.length - 1].focus();
+                }
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setActiveTab(btn.getAttribute('data-tab'), { focusPanel: true });
+                }
+            });
+        });
+
+        const initStatusCharts = () => {
+            if (window.Chart && document.getElementById('settingsResponseTimeChart')) {
+                const ctx = document.getElementById('settingsResponseTimeChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Calendar', 'Weather', 'Sports', 'Notes', 'Shopping'],
+                        datasets: [{
+                            label: 'Response Time (ms)',
+                            data: JSON.parse('{{ [status_data.response_times.calendar_response_time_ms, status_data.response_times.weather_response_time_ms, status_data.response_times.sports_response_time_ms, status_data.response_times.notes_response_time_ms, status_data.response_times.shopping_response_time_ms] | tojson | safe }}'),
+                            backgroundColor: 'rgba(74, 144, 226, 0.6)',
+                            borderColor: 'rgba(74, 144, 226, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            }
+        };
+
+        // Function to update performance metrics
+        const updatePerformanceMetrics = () => {
+            fetch('/admin/performance-metrics')
+                .then(response => response.json())
+                .then(data => {
+                    const mem = document.getElementById('memory-mb-val');
+                    if (mem) mem.textContent = data.memory_mb;
+                    const photos = document.getElementById('photo-count-val');
+                    if (photos) photos.textContent = data.photo_count;
+                    const ticker = document.getElementById('ticker-game-count-val');
+                    if (ticker) ticker.textContent = data.ticker_game_count;
+                })
+                .catch(error => console.error('Error fetching performance metrics:', error));
+        };
+
+        // Function to clear caches
+        const clearCache = (cacheTypes) => {
+            statusNode.textContent = 'Clearing caches...';
+            fetch('/api/admin/clear-cache', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cache_types: cacheTypes })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    statusNode.textContent = `Caches cleared: ${cacheTypes.join(', ')}`;
+                    setTimeout(updatePerformanceMetrics, 1000);
+                })
+                .catch(error => {
+                    console.error('Error clearing caches:', error);
+                    statusNode.textContent = 'Error clearing caches';
+                });
+        };
+
+        // Function to restart application
+        const restartApplication = () => {
+            if (confirm('Are you sure you want to restart the application?')) {
+                statusNode.textContent = 'Restarting application...';
+                fetch('/api/admin/restart-app', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        statusNode.textContent = data.message || 'Application restart initiated';
+                    })
+                    .catch(error => {
+                        console.error('Error restarting application:', error);
+                        statusNode.textContent = 'Error restarting application';
+                    });
+            }
+        };
+
+        // Attach static listeners
+        const weatherBtn = document.getElementById('clear-weather-cache');
+        if (weatherBtn) weatherBtn.addEventListener('click', () => clearCache(['weather']));
+
+        const sportsBtn = document.getElementById('clear-sports-cache');
+        if (sportsBtn) sportsBtn.addEventListener('click', () => clearCache(['sports', 'ticker']));
+
+        const calBtn = document.getElementById('clear-calendar-cache');
+        if (calBtn) calBtn.addEventListener('click', () => clearCache(['calendar']));
+
+        const allBtn = document.getElementById('clear-all-cache');
+        if (allBtn) allBtn.addEventListener('click', () => clearCache(['weather', 'sports', 'ticker', 'calendar', 'general']));
+
+        const restartBtn = document.getElementById('restart-app');
+        if (restartBtn) restartBtn.addEventListener('click', restartApplication);
+
+        const clearSelectionBtn = document.getElementById('clear-selection-btn');
+        if (clearSelectionBtn) {
+            clearSelectionBtn.addEventListener('click', () => {
+                document.querySelectorAll('.favorite-team-checkbox:checked').forEach(cb => cb.checked = false);
+                updateLeagueCounts();
+                statusNode.textContent = 'Selections cleared. Remember to save your changes.';
+            });
+        }
+
+        favoritesForm.addEventListener('change', event => {
+            if (event.target.matches('.favorite-team-checkbox')) {
+                updateLeagueCounts();
+            }
+        });
+
+        document.querySelectorAll('.league-filter').forEach(input => {
+            input.addEventListener('input', event => {
+                applyFilter(event.target.getAttribute('data-league-filter'), event.target.value);
+            });
+            input.addEventListener('keydown', event => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    event.target.value = '';
+                    applyFilter(event.target.getAttribute('data-league-filter'), '');
+                }
+            });
+        });
+
+        favoritesForm.addEventListener('submit', event => {
+            event.preventDefault();
+            const selectedTeams = gatherSelections();
+            statusNode.textContent = 'Saving team preferences...';
+            fetch('/api/sports/favorite_teams', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ favorite_teams: selectedTeams })
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error(`Save failed: ${response.status}`);
+                    return response.text();
+                })
+                .then(html => {
+                    const ticker = document.getElementById('sports-ticker');
+                    if (ticker) ticker.innerHTML = html;
+                    statusNode.textContent = `Saved ${selectedTeams.length} favorite teams.`;
+                })
+                .catch(error => {
+                    console.error('Failed to save favorite teams', error);
+                    statusNode.textContent = 'Unable to save favorites right now.';
+                });
+        });
+
+        const saveBurnInSettings = () => {
+            const enabled = document.getElementById('burn-in-enabled');
+            const shiftEnabled = document.getElementById('burn-in-shift-enabled');
+            const dimEnabled = document.getElementById('burn-in-dim-enabled');
+            const shiftRange = document.getElementById('burn-in-shift-range');
+            const shiftInterval = document.getElementById('burn-in-shift-interval');
+            const dimIdle = document.getElementById('burn-in-dim-idle');
+            const dimLevel = document.getElementById('burn-in-dim-level');
+
+            if (!enabled || !shiftEnabled || !dimEnabled) {
+                return;
+            }
+
+            const payload = {
+                enabled: enabled.checked,
+                shift_enabled: shiftEnabled.checked,
+                dim_enabled: dimEnabled.checked,
+                shift_range_px: shiftRange ? parseInt(shiftRange.value, 10) : undefined,
+                shift_interval_seconds: shiftInterval ? parseInt(shiftInterval.value, 10) * 60 : undefined,
+                dim_idle_seconds: dimIdle ? parseInt(dimIdle.value, 10) * 60 : undefined,
+                dim_level: dimLevel ? (parseInt(dimLevel.value, 10) / 100) : undefined
+            };
+
+            statusNode.textContent = 'Saving burn-in settings...';
+            fetch('/api/admin/burn-in', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    statusNode.textContent = 'Burn-in settings saved.';
+                    if (data && data.burn_in && typeof window.updateBurnInConfig === 'function') {
+                        window.updateBurnInConfig(data.burn_in);
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to save burn-in settings', error);
+                    statusNode.textContent = 'Unable to save burn-in settings right now.';
+                });
+        };
+
+        const burnInApplyBtn = document.getElementById('burn-in-apply');
+        if (burnInApplyBtn) {
+            burnInApplyBtn.addEventListener('click', saveBurnInSettings);
+        }
+
+        document.querySelectorAll('.settings-skip-link').forEach(link => {
+            link.addEventListener('click', (event) => {
+                const targetId = link.getAttribute('href').slice(1);
+                const target = document.getElementById(targetId);
+                const tab = link.getAttribute('data-tab');
+                if (tab) {
+                    setActiveTab(tab);
+                }
+                if (target) {
+                    event.preventDefault();
+                    setTimeout(() => {
+                        target.setAttribute('tabindex', '-1');
+                        target.focus();
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 50);
+                }
+            });
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (!event.altKey || !event.shiftKey) {
+                return;
+            }
+            const key = event.key.toLowerCase();
+            if (key === '1') {
+                event.preventDefault();
+                setActiveTab('preferences', { focusPanel: true });
+                return;
+            }
+            if (key === '2') {
+                event.preventDefault();
+                setActiveTab('status', { focusPanel: true });
+                return;
+            }
+            if (key === 's') {
+                const saveBtn = favoritesForm ? favoritesForm.querySelector('button[type="submit"]') : null;
+                if (saveBtn) {
+                    event.preventDefault();
+                    saveBtn.click();
+                }
+                return;
+            }
+            if (key === 'c') {
+                const clearBtn = document.getElementById('clear-selection-btn');
+                if (clearBtn) {
+                    event.preventDefault();
+                    clearBtn.click();
+                }
+                return;
+            }
+            if (key === 'r') {
+                const refreshBtn = document.getElementById('sports-ticker-refresh');
+                if (refreshBtn) {
+                    event.preventDefault();
+                    refreshBtn.click();
+                }
+                return;
+            }
+            if (key === 'f') {
+                event.preventDefault();
+                setActiveTab('preferences');
+                const filter = document.querySelector('.league-filter');
+                if (filter) {
+                    filter.focus();
+                }
+            }
+        });
+
+        // Initialize
+        updatePerformanceMetrics();
+        setInterval(updatePerformanceMetrics, 30000);
+        updateLeagueCounts();
+
+        // Ticker toggles
+        const tickerEnabledToggle = document.getElementById('sports-ticker-enabled');
+        const mockModeToggle = document.getElementById('sports-ticker-mock-mode');
+        const tickerRefreshButton = document.getElementById('sports-ticker-refresh');
+
+        if (tickerEnabledToggle) {
+            tickerEnabledToggle.addEventListener('change', function () {
+                fetch('/api/admin/sports-ticker/enabled', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: this.checked })
+                });
+            });
+        }
+
+        if (mockModeToggle) {
+            mockModeToggle.addEventListener('change', function () {
+                fetch('/api/admin/sports-ticker/mock-mode', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mock_mode: this.checked })
+                });
+            });
+        }
+
+        if (tickerRefreshButton) {
+            tickerRefreshButton.addEventListener('click', function () {
+                statusNode.textContent = 'Refreshing sports ticker...';
+                fetch('/api/sports/ticker/refresh', { method: 'POST' })
+                    .then(() => { statusNode.textContent = 'Refresh triggered.'; });
+            });
+        }
+    })();
+</script>
+
+<style>
+    /* Tabs styles */
+    .settings-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .settings-tab-btn {
+        padding: 10px 20px;
+        background: var(--surface-color);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        color: var(--text-color);
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .settings-tab-btn.active {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        color: white;
+    }
+
+    .settings-tab-btn:focus-visible {
+        outline: 2px solid var(--primary-color);
+        outline-offset: 2px;
+    }
+
+    .settings-tab-content {
+        display: none;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .settings-tab-content.active-content {
+        display: flex;
+    }
+
+    .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+    }
+
+    .settings-view {
+        padding: 1.5rem;
+        color: var(--text-color);
+        overflow-y: auto;
+        max-height: calc(100vh - var(--footer-h, 0px) - 80px);
+    }
+
+    .settings-skip-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .settings-skip-link {
+        position: absolute;
+        left: -999px;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+    }
+
+    .settings-skip-link:focus {
+        position: static;
+        width: auto;
+        height: auto;
+        padding: 0.35rem 0.6rem;
+        border-radius: 6px;
+        background-color: var(--surface-color);
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+        text-decoration: none;
+    }
+
+    .settings-header h1 {
+        margin-bottom: 0.25rem;
+        font-size: 1.75rem;
+    }
+
+    .settings-subtitle {
+        margin-bottom: 1.5rem;
+        color: var(--muted-text-color, #6b7280);
+    }
+
+    .settings-card {
+        background-color: var(--card-bg, #ffffff0f);
+        border-radius: var(--border-radius, 12px);
+        border: 1px solid var(--border-color, #2d2d2d);
+        padding: 1.5rem;
+    }
+
+    .settings-description {
+        margin-bottom: 1rem;
+        color: var(--muted-text-color, #6b7280);
+    }
+
+    .settings-form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    .settings-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        font-size: 0.9rem;
+        color: var(--muted-text-color, #6b7280);
+    }
+
+    .settings-field-label {
+        font-weight: 600;
+        color: var(--text-color);
+        font-size: 0.85rem;
+    }
+
+    .settings-field input {
+        padding: 0.5rem 0.65rem;
+        border-radius: var(--border-radius, 12px);
+        border: 1px solid var(--border-color, #2d2d2d);
+        background-color: var(--input-bg, rgba(255, 255, 255, 0.04));
+        color: inherit;
+    }
+
+    .league-groups {
+        display: grid;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .league-group {
+        border: 1px solid var(--border-color, #2d2d2d);
+        border-radius: var(--border-radius, 12px);
+        background-color: var(--panel-bg, rgba(255, 255, 255, 0.02));
+    }
+
+    .league-group>summary {
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        font-weight: 600;
+    }
+
+    .league-group[open]>summary {
+        border-bottom: 1px solid var(--border-color, #2d2d2d);
+    }
+
+    .league-body {
+        padding: 1rem;
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .search-label {
+        font-size: 0.85rem;
+        color: var(--muted-text-color, #6b7280);
+    }
+
+    .league-filter {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border-radius: var(--border-radius, 12px);
+        border: 1px solid var(--border-color, #2d2d2d);
+        background-color: var(--input-bg, rgba(255, 255, 255, 0.04));
+        color: inherit;
+    }
+
+    .team-grid {
+        display: grid;
+        gap: 0.5rem;
+    }
+
+    @media (min-width: 768px) {
+        .team-grid {
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        }
+    }
+
+    .team-option {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.45rem 0.6rem;
+        border-radius: var(--border-radius, 10px);
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+        border: 1px solid transparent;
+    }
+
+    .team-option:hover {
+        border-color: var(--accent-color, #2563eb);
+        background-color: var(--accent-color, rgba(37, 99, 235, 0.1));
+    }
+
+    .team-label {
+        display: flex;
+        flex-direction: column;
+        font-weight: 500;
+    }
+
+    .toggle-group {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .toggle-label {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        padding: 0.5rem 0;
+        position: relative;
+    }
+
+    .toggle-checkbox {
+        position: absolute;
+        opacity: 0;
+        width: 1px;
+        height: 1px;
+    }
+
+    .toggle-slider {
+        width: 44px;
+        height: 22px;
+        background-color: var(--border-color, #2d2d2d);
+        border-radius: 11px;
+        position: relative;
+        transition: background-color 0.3s ease;
+    }
+
+    .toggle-slider::before {
+        content: '';
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background-color: white;
+        top: 2px;
+        left: 2px;
+        transition: transform 0.3s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+
+    .toggle-checkbox:checked+.toggle-slider {
+        background-color: var(--accent-color, #2563eb);
+    }
+
+    .toggle-checkbox:checked+.toggle-slider::before {
+        transform: translateX(22px);
+    }
+
+    .toggle-checkbox:focus-visible+.toggle-slider {
+        outline: 2px solid var(--primary-color);
+        outline-offset: 3px;
+    }
+
+    .toggle-text {
+        font-weight: 500;
+    }
+
+    .team-abbr {
+        font-size: 0.75rem;
+        color: var(--muted-text-color, #6b7280);
+    }
+
+    .settings-actions {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+    }
+
+    .settings-status {
+        margin-top: 1rem;
+        font-size: 0.95rem;
+        color: var(--muted-text-color, #6b7280);
+    }
+
+    /* Performance metrics styles */
+    .metrics-display {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background-color: var(--panel-bg, rgba(255, 255, 255, 0.02));
+        border-radius: var(--border-radius, 12px);
+    }
+
+    .metric-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0.5rem;
+    }
+
+    .metric-label {
+        font-size: 0.85rem;
+        color: var(--muted-text-color, #6b7280);
+        margin-bottom: 0.25rem;
+    }
+
+    .metric-value {
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    .metric-unit {
+        font-size: 0.8rem;
+        color: var(--muted-text-color, #6b7280);
+        margin-left: 0.25rem;
+    }
+
+    .cache-management,
+    .app-management {
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color, #2d2d2d);
+    }
+
+    .cache-actions,
+    .app-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+    }
+
+    .btn-warning {
+        background-color: var(--warning-color, #f59e0b);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: var(--border-radius, 12px);
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    .btn-warning:hover {
+        background-color: var(--warning-color-hover, #d97706);
+    }
+
+    .btn-secondary {
+        background-color: var(--secondary-color, #6b7280);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: var(--border-radius, 12px);
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    .btn-secondary:hover {
+        background-color: var(--secondary-color-hover, #4b5563);
+    }
+</style>

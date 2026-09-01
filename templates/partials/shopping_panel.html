@@ -1,0 +1,71 @@
+<div class="panel" role="region" aria-labelledby="shopping-panel-title">
+    <div class="panel-header" role="heading" aria-level="2" id="shopping-panel-title">
+        <h2 class="panel-title">Shopping List</h2>
+        <span class="item-count">({{ active_count if active_count is defined else (items|length if items else 0) }} active)</span>
+    </div>
+    
+    <form id="add-shopping-form" 
+          hx-post="/api/shopping" 
+          hx-target="#shopping-list" 
+          hx-swap="beforeend"
+          hx-on:after-request="this.reset()"
+          role="form"
+          aria-label="Add new shopping list item">
+        <div class="form-group">
+            <label for="add-shopping-text" class="sr-only">Item Name</label>
+            <input type="text" id="add-shopping-text" name="text" class="form-control" placeholder="Add item..." required aria-label="Enter shopping item name">
+        </div>
+        <div class="form-group">
+            <label for="add-shopping-qty" class="sr-only">Quantity</label>
+            <input type="text" id="add-shopping-qty" name="qty" class="form-control" placeholder="Quantity (optional)" aria-label="Enter quantity for shopping item">
+        </div>
+        <button type="submit" class="btn btn-block" aria-label="Add item to shopping list">Add Item</button>
+    </form>
+    
+    <div id="shopping-container" role="region" aria-label="Shopping list items">
+        <ul id="shopping-list" class="list-group" role="list" aria-label="List of shopping items">
+            {% if items %}
+                {% for item in items %}
+                    <li class="list-group-item {% if item.done %}done{% endif %}" id="item-{{ item.id }}" role="listitem" aria-label="{{ 'Completed ' if item.done else 'Uncompleted ' }}{{ item.qty if item.qty else '1' }} x {{ item.text }}">
+                        <div class="d-flex" style="justify-content: space-between; align-items: center;">
+                            <div class="d-flex align-items-center" style="flex: 1; text-align: left;">
+                                <input type="checkbox" 
+                                       id="checkbox-{{ item.id }}"
+                                       class="shopping-checkbox" 
+                                       {% if item.done %}checked{% endif %}
+                                       hx-post="/api/shopping/{{ item.id }}/toggle"
+                                       hx-target="#item-{{ item.id }}"
+                                       hx-swap="outerHTML"
+                                       aria-label="Mark {{ item.text }} as {% if item.done %}not completed{% else %}completed{% endif %}">
+                                <label for="checkbox-{{ item.id }}" class="shopping-text {% if item.done %}line-through{% endif %}" aria-hidden="true">
+                                    {% if item.qty %}{{ item.qty }} x {% endif %}{{ item.text }}
+                                </label>
+                            </div>
+                            
+                            <div class="shopping-actions" role="group" aria-label="Shopping item actions">
+                                <button class="btn btn-sm"
+                                        hx-get="/api/shopping/{{ item.id }}/edit"
+                                        hx-target="#item-{{ item.id }}"
+                                        hx-swap="outerHTML"
+                                        aria-label="Edit shopping item: {{ item.text[:50] if item.text|length > 50 else item.text }}">
+                                    <i class="icon icon-pencil" aria-hidden="true"></i>
+                                    <span class="sr-only">Edit</span>
+                                </button>
+                                <button class="btn btn-sm btn-danger"
+                                        hx-delete="/api/shopping/{{ item.id }}"
+                                        hx-target="#item-{{ item.id }}"
+                                        hx-swap="delete"
+                                        aria-label="Delete shopping item: {{ item.text[:50] if item.text|length > 50 else item.text }}">
+                                    <i class="icon icon-trash" aria-hidden="true"></i>
+                                    <span class="sr-only">Delete</span>
+                                </button>
+                            </div>
+                        </div>
+                    </li>
+                {% endfor %}
+            {% else %}
+                <li class="list-group-item" role="listitem" aria-label="No shopping items available">No items yet</li>
+            {% endif %}
+        </ul>
+    </div>
+</div>

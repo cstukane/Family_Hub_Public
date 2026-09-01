@@ -1,0 +1,109 @@
+<div id="timers-modal"
+     class="modal"
+     role="dialog"
+     aria-labelledby="timers-modal-title"
+     aria-modal="true"
+     data-modal="timers">
+    <div class="modal-content" role="document">
+        <div class="modal-header" role="heading" aria-level="2" id="timers-modal-title">
+            <h2 class="modal-title">Timers</h2>
+            <div>
+                <span class="item-count" id="timers-count">({{ timers|length if timers else 0 }} active)</span>
+                <span class="modal-close" aria-label="Close modal" data-action="close-modal">&times;</span>
+            </div>
+        </div>
+        
+        <div class="modal-body" id="timers-modal-body" role="document">
+            <!-- Quick preset buttons for common timer durations -->
+            <div class="form-group">
+                <label>Quick Presets</label>
+                <div class="d-flex" style="gap: 5px; flex-wrap: wrap;">
+                    <button type="button" 
+                            class="btn btn-sm" 
+                            onclick="addTimerModal(5, '5 min timer')"
+                            aria-label="Start 5 minute timer">
+                        5 min
+                    </button>
+                    <button type="button" 
+                            class="btn btn-sm" 
+                            onclick="addTimerModal(10, '10 min timer')"
+                            aria-label="Start 10 minute timer">
+                        10 min
+                    </button>
+                    <button type="button" 
+                            class="btn btn-sm" 
+                            onclick="addTimerModal(15, '15 min timer')"
+                            aria-label="Start 15 minute timer">
+                        15 min
+                    </button>
+                    <button type="button" 
+                            class="btn btn-sm" 
+                            onclick="addTimerModal(30, '30 min timer')"
+                            aria-label="Start 30 minute timer">
+                        30 min
+                    </button>
+                    <button type="button" 
+                            class="btn btn-sm" 
+                            onclick="addTimerModal(60, '60 min timer')"
+                            aria-label="Start 60 minute timer">
+                        60 min
+                    </button>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="add-timer-minutes-modal" class="sr-only">Minutes</label>
+                <input type="number" id="add-timer-minutes-modal" class="form-control" placeholder="Minutes" min="1" value="1" aria-label="Enter timer duration in minutes in modal">
+            </div>
+            <div class="form-group">
+                <label for="add-timer-label-modal" class="sr-only">Timer Label (Optional)</label>
+                <input type="text" id="add-timer-label-modal" class="form-control" placeholder="Timer label (optional)" aria-label="Enter timer label in modal (optional)">
+            </div>
+            <button class="btn btn-block" 
+                    onclick="addCustomTimerModal()"
+                    aria-label="Add timer to list in modal">Add Timer</button>
+            
+            <div id="timers-container-modal" role="region" aria-label="Timers list in modal">
+                <ul id="timers-list-modal" class="list-group" role="list" aria-label="List of active timers in modal">
+                    {% if timers %}
+                        {% for timer in timers %}
+                            <li class="list-group-item timer-modal-item" id="timer-modal-{{ timer.id }}" role="listitem" aria-label="Timer: {{ timer.label }}, {{ timer.time_remaining }} seconds remaining">
+                                <div class="timer-label" aria-label="Timer name">{{ timer.label }}</div>
+                                <div class="timer-countdown" aria-label="Time remaining">
+                                    {% if timer.time_remaining %}
+                                        {% set minutes = timer.time_remaining // 60 %}
+                                        {% set seconds = timer.time_remaining % 60 %}
+                                        {{ minutes }}:{{ "%02d"|format(seconds) }}
+                                    {% else %}
+                                        0:00
+                                    {% endif %}
+                                </div>
+                                <div class="timer-actions" role="group" aria-label="Timer actions in modal">
+                                    <button class="btn btn-sm btn-danger"
+                                            hx-delete="/api/timers/{{ timer.id }}"
+                                            hx-target="#timer-modal-{{ timer.id }}"
+                                            hx-swap="delete"
+                                            aria-label="Cancel timer: {{ timer.label[:50] if timer.label|length > 50 else timer.label }} in modal"
+                                            hx-on:htmx:afterSwap="if (typeof refreshTimersCount === 'function') { refreshTimersCount(); } if (typeof requestTimerUpdate === 'function') { requestTimerUpdate(); }">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    {% else %}
+                        <li class="list-group-item" data-empty-state="timers" role="listitem" aria-label="No active timers available">No active timers</li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button type="button"
+                    class="btn"
+                    data-action="close-modal"
+                    aria-label="Close modal">
+                Close
+            </button>
+        </div>
+    </div>
+</div>

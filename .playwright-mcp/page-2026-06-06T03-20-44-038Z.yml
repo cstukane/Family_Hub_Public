@@ -1,0 +1,20 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - heading "Family Hub Dashboard" [level=1] [ref=e4]
+  - main [ref=e5]:
+    - generic [ref=e6]:
+      - heading "Today's Overview" [level=2] [ref=e7]
+      - generic [ref=e8]: Calendar widget would be here
+      - generic [ref=e9]: Weather widget would be here
+      - generic [ref=e10]: News ticker would be here
+    - generic [ref=e11]:
+      - heading "Media Controls" [level=2] [ref=e12]
+      - button "YouTube" [ref=e13] [cursor=pointer]
+      - button "Twitch" [ref=e14] [cursor=pointer]
+      - button "Pluto TV" [ref=e15] [cursor=pointer]
+      - button "Roku Channel" [ref=e16] [cursor=pointer]
+      - button "Vimeo" [ref=e17] [cursor=pointer]
+      - button "Dailymotion" [ref=e18] [cursor=pointer]
+    - generic [ref=e19]:
+      - heading "Taskbar" [level=2] [ref=e20]
+      - button "Close Media (Ctrl+Shift+X)" [ref=e21]

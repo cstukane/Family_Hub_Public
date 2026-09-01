@@ -1,0 +1,57 @@
+- generic [ref=e2]:
+  - status [ref=e3]:
+    - region "System alerts"
+  - main [ref=e4]:
+    - region "Weekly Calendar":
+      - application "Weekly calendar view"
+    - region "Center Zone highlights"
+  - complementary "Information panels" [ref=e5]:
+    - status [ref=e6]:
+      - 'generic "Current time: 11:07 PM" [ref=e7]': 11:07 PM
+      - 'generic "Current date: Fri, Jun 5" [ref=e8]': Fri, Jun 5
+    - generic [ref=e11]:
+      - button "Open Notes" [ref=e12] [cursor=pointer]:
+        - img [ref=e14]
+        - generic [ref=e15]: Notes
+      - button "Open Shopping List" [ref=e16] [cursor=pointer]:
+        - img [ref=e18]
+        - generic [ref=e19]: Shopping
+      - button "Open Timers" [ref=e20] [cursor=pointer]:
+        - img [ref=e22]
+        - generic [ref=e23]: Timers
+      - button "Open Kitchen Reference" [ref=e24] [cursor=pointer]:
+        - img [ref=e25]
+        - generic [ref=e26]: Kitchen Reference
+    - generic:
+      - application "weather panel content"
+  - navigation "Application navigation" [ref=e27]:
+    - menuitem "Home" [ref=e28] [cursor=pointer]:
+      - img [ref=e30]
+      - generic [ref=e31]: Home
+    - menuitem "Spotify" [ref=e32] [cursor=pointer]:
+      - img [ref=e34]
+      - generic [ref=e35]: Spotify
+    - menuitem "YouTube" [ref=e36] [cursor=pointer]:
+      - img [ref=e38]
+      - generic [ref=e39]: YouTube
+    - menuitem "ESPN" [ref=e40] [cursor=pointer]:
+      - img [ref=e42]
+      - generic [ref=e43]: ESPN
+    - menuitem "Disney+" [ref=e44] [cursor=pointer]:
+      - img [ref=e46]
+      - generic [ref=e47]: Disney+
+    - menuitem "HBO Max" [ref=e48] [cursor=pointer]:
+      - img [ref=e50]
+      - generic [ref=e51]: HBO Max
+    - menuitem "Roku" [ref=e52] [cursor=pointer]:
+      - img [ref=e54]
+      - generic [ref=e55]: Roku
+    - menuitem "Pluto" [ref=e56] [cursor=pointer]:
+      - img [ref=e58]
+      - generic [ref=e59]: Pluto
+    - menuitem "Apps Folder" [ref=e60] [cursor=pointer]:
+      - generic [ref=e62]: Apps
+    - menuitem "Settings and Status" [ref=e63] [cursor=pointer]:
+      - generic [ref=e65]: Settings
+  - generic [ref=e68]:
+    - marquee "Sports ticker with scrolling game updates"

@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Kitchen Hub — UI Redesign</title>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #1a1c1f; }
+  @keyframes tickerScroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState } = React;
+
+/* ── Design tokens ── */
+const C = {
+  bg:        '#0d1117',
+  surface:   '#161b22',
+  surface2:  '#21262d',
+  surface3:  '#2d333b',
+  border:    'rgba(255,255,255,0.08)',
+  border2:   'rgba(255,255,255,0.13)',
+  text:      '#e6edf3',
+  dim:       '#8b949e',
+  muted:     '#484f58',
+  accent:    '#00b4d8',
+  accentBg:  'rgba(0,180,216,0.12)',
+  accentDim: 'rgba(0,180,216,0.22)',
+};
+const FONT = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
+
+/* ── Calendar mock data ── */
+const WEEK = [
+  { abbr:'Mon', date:'2' },
+  { abbr:'Tue', date:'3' },
+  { abbr:'Wed', date:'4' },
+  { abbr:'Thu', date:'5' },
+  { abbr:'Fri', date:'6', today:true },
+  { abbr:'Sat', date:'7' },
+  { abbr:'Sun', date:'8' },
+];
+
+const EC = {
+  work:     '#00b4d8',
+  family:   '#f97316',
+  personal: '#a78bfa',
+  kids:     '#34d399',
+  home:     '#8b949e',
+  social:   '#f43f5e',
+};
+
+const EVENTS = [
+  { day:0, title:'Team Standup',       start:9,    end:9.5,  color:EC.work },
+  { day:0, title:'Dentist — Emma',     start:14,   end:15.5, color:EC.personal },
+  { day:1, title:'Grocery Run',        start:10,   end:11,   color:EC.home },
+  { day:1, title:'Piano Lesson',       start:15.5, end:16.5, color:EC.kids },
+  { day:2, title:'Sprint Review',      start:13,   end:14,   color:EC.work },
+  { day:2, title:'Soccer Practice',    start:16,   end:17.5, color:EC.kids },
+  { day:3, title:'Date Night',         start:19,   end:21,   color:EC.family },
+  { day:4, title:'School Pickup',      start:15,   end:15.5, color:EC.kids },
+  { day:4, title:'Book Club',          start:18,   end:20,   color:EC.personal },
+  { day:5, title:"Farmer's Market",    start:9,    end:11,   color:EC.family },
+  { day:5, title:'BBQ — Neighbors',    start:15,   end:19,   color:EC.social },
+  { day:6, title:'Meal Prep',          start:11,   end:13,   color:EC.home },
+  { day:6, title:'Movie Night',        start:19,   end:21,   color:EC.family },
+];
+
+const ALL_DAY = [
+  { day:3, title:'WFH',            color:EC.work },
+  { day:4, title:'WFH',            color:EC.work },
+  { day:5, title:"Dad's Birthday", color:EC.family },
+];
+
+const S_H = 7, E_H = 21;
+const NOW = 14 + 20/60;
+
+function fmtHour(h) {
+  if (h === 12) return '12pm';
+  if (h === 0 || h === 24) return '12am';
+  return h < 12 ? `${h}am` : `${h-12}pm`;
+}
+function fmtTime(h) {
+  const hour = Math.floor(h), m = Math.round((h%1)*60);
+  const sfx = hour<12?'am':'pm', dh = hour%12||12;
+  return m ? `${dh}:${String(m).padStart(2,'0')}${sfx}` : `${dh}${sfx}`;
+}
+
+/* ── Weather icons (inline SVG) ── */
+function WIco({ type, size=20 }) {
+  const s = { width:size, height:size, display:'block', flexShrink:0 };
+  const p = { fill:'none', stroke:'currentColor', strokeWidth:'1.8', strokeLinecap:'round' };
+  if (type==='sunny') return (
+    <svg style={s} viewBox="0 0 24 24" {...p}>
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    </svg>
+  );
+  if (type==='partly') return (
+    <svg style={s} viewBox="0 0 24 24" {...p}>
+      <circle cx="9" cy="9" r="3"/>
+      <path d="M7 15h10a4 4 0 0 0 0-8 5 5 0 0 0-8.06 2.7"/>
+    </svg>
+  );
+  if (type==='rain') return (
+    <svg style={s} viewBox="0 0 24 24" {...p}>
+      <path d="M5 16h12a4 4 0 0 0 0-8 5 5 0 0 0-9.5 1.5 3 3 0 0 0-2.5 6.5z"/>
+      <path d="M9 19l-1 3M13 19v3M17 19l-1 3"/>
+    </svg>
+  );
+  return (
+    <svg style={s} viewBox="0 0 24 24" {...p}>
+      <path d="M6 18h11a4 4 0 0 0 0-8 5 5 0 0 0-9 3 3 3 0 0 0-2 5z"/>
+    </svg>
+  );
+}
+
+/* ── Calendar Components ── */
+function DayHeaders() {
+  return (
+    <div style={{ display:'flex', marginBottom:8, fontFamily:FONT }}>
+      <div style={{ width:46, flexShrink:0 }}/>
+      {WEEK.map((d,i)=>(
+        <div key={i} style={{
+          flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:5,
+          paddingBottom:10,
+          borderBottom:`1px solid ${d.today ? C.accent+'66' : C.border}`,
+        }}>
+          <span style={{ fontSize:11, fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:d.today?C.accent:C.dim }}>
+            {d.abbr}
+          </span>
+          <div style={{
+            width:30, height:30, borderRadius:'50%',
+            background:d.today?C.accent:'transparent',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            fontSize:16, fontWeight:d.today?700:400,
+            color:d.today?'#0d1117':C.text,
+          }}>{d.date}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CalendarGrid({ gridH=580 }) {
+  const adH = 32;
+  const timeH = gridH - adH - 14;
+  const hh = timeH / (E_H - S_H);
+
+  return (
+    <div style={{ height:gridH, display:'flex', flexDirection:'column', fontFamily:FONT }}>
+      {/* All-day row */}
+      <div style={{ height:adH, display:'flex', gap:0, marginBottom:6 }}>
+        <div style={{ width:46, flexShrink:0, fontSize:10, color:C.muted, textAlign:'right', paddingRight:8, paddingTop:2, letterSpacing:'0.04em' }}>all day</div>
+        {WEEK.map((d,di)=>(
+          <div key={di} style={{ flex:1, paddingLeft:4, paddingRight:2, display:'flex', flexDirection:'column', gap:2, justifyContent:'center' }}>
+            {ALL_DAY.filter(e=>e.day===di).map((e,ei)=>(
+              <div key={ei} style={{
+                background:e.color+'20', borderLeft:`2px solid ${e.color}`,
+                borderRadius:3, padding:'2px 5px',
+                fontSize:10, color:C.dim, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis',
+              }}>{e.title}</div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* Divider */}
+      <div style={{ height:1, background:C.border, marginBottom:7 }}/>
+
+      {/* Time grid */}
+      <div style={{ height:timeH, display:'flex', position:'relative' }}>
+        {/* Hour labels */}
+        <div style={{ width:46, flexShrink:0, position:'relative' }}>
+          {Array.from({length:E_H-S_H},(_,i)=>(
+            <div key={i} style={{
+              position:'absolute', top:i*hh-8,
+              right:8, fontSize:10, color:C.muted,
+              lineHeight:1, whiteSpace:'nowrap',
+            }}>{i===0?'':fmtHour(S_H+i)}</div>
+          ))}
+        </div>
+
+        {/* Day columns */}
+        {WEEK.map((d,di)=>{
+          const dayEvts = EVENTS.filter(e=>e.day===di);
+          return (
+            <div key={di} style={{
+              flex:1, position:'relative',
+              borderLeft:`1px solid ${C.border}`,
+              background:d.today?'rgba(0,180,216,0.03)':'transparent',
+              height:timeH,
+            }}>
+              {/* Hour lines */}
+              {Array.from({length:E_H-S_H+1},(_,i)=>(
+                <div key={i} style={{
+                  position:'absolute', top:i*hh, left:0, right:0, height:1,
+                  background: i%2===0 ? C.border : 'rgba(255,255,255,0.03)',
+                }}/>
+              ))}
+
+              {/* Events */}
+              {dayEvts.map((evt,ei)=>{
+                const top=(evt.start-S_H)*hh;
+                const evtH=Math.max((evt.end-evt.start)*hh-2,18);
+                return (
+                  <div key={ei} style={{
+                    position:'absolute', top:top+1, left:3, right:3,
+                    height:evtH,
+                    background:evt.color+'1c', borderLeft:`3px solid ${evt.color}`,
+                    borderRadius:5, padding:'3px 6px',
+                    overflow:'hidden', zIndex:2,
+                  }}>
+                    <div style={{ fontSize:11, fontWeight:600, color:C.text, lineHeight:1.3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {evt.title}
+                    </div>
+                    {evtH>28 && (
+                      <div style={{ fontSize:10, color:C.dim, marginTop:1 }}>{fmtTime(evt.start)}</div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Now line (today only) */}
+              {d.today && (
+                <div style={{ position:'absolute', top:(NOW-S_H)*hh, left:-4, right:0, display:'flex', alignItems:'center', zIndex:10, pointerEvents:'none' }}>
+                  <div style={{ width:9, height:9, borderRadius:'50%', background:C.accent, flexShrink:0 }}/>
+                  <div style={{ flex:1, height:2, background:C.accent, opacity:0.85 }}/>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CalendarNav() {
+  const btnBase = { background:'none', border:`1px solid ${C.border}`, borderRadius:20, cursor:'pointer', fontFamily:FONT, transition:'all 0.15s' };
+  return (
+    <div style={{ display:'flex', alignItems:'center', marginBottom:10, fontFamily:FONT }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginRight:'auto' }}>
+        <button style={{ ...btnBase, color:C.dim, fontSize:16, padding:'2px 10px', border:'none' }}>‹</button>
+        <span style={{ fontSize:17, fontWeight:600, color:C.text, letterSpacing:'-0.01em' }}>June 2026</span>
+        <button style={{ ...btnBase, color:C.dim, fontSize:16, padding:'2px 10px', border:'none' }}>›</button>
+        <button style={{ ...btnBase, color:C.accent, fontSize:12, padding:'3px 11px', borderColor:C.accent+'44' }}>Today</button>
+      </div>
+      <div style={{ display:'flex', gap:5, alignItems:'center' }}>
+        {['Week','Month'].map(v=>(
+          <button key={v} style={{
+            ...btnBase, fontSize:12, fontWeight:500, padding:'4px 12px',
+            background:v==='Week'?C.accentBg:'transparent',
+            borderColor:v==='Week'?C.accent+'44':C.border,
+            color:v==='Week'?C.accent:C.dim,
+          }}>{v}</button>
+        ))}
+        <button style={{ ...btnBase, color:C.dim, width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, borderRadius:'50%', padding:0 }}>+</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Up Next + Shopping (below calendar) ── */
+function BelowCalendar() {
+  return (
+    <div style={{ display:'flex', gap:12, fontFamily:FONT, marginTop:10 }}>
+      {/* Up Next */}
+      <div style={{ flex:1, background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:'14px 16px' }}>
+        <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:C.muted, marginBottom:10 }}>Up Next</div>
+        <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
+          {[
+            { time:'2:20pm', title:'Now',             sub:'Afternoon',      color:C.accent, now:true },
+            { time:'3:00pm', title:'School Pickup',   sub:'',               color:EC.kids },
+            { time:'6:00pm', title:'Book Club',       sub:'',               color:EC.personal },
+            { time:'Sat 9am', title:"Farmer's Market", sub:'Tomorrow',      color:EC.family },
+          ].map((e,i)=>(
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <div style={{ width:3, height:22, borderRadius:2, background:e.color, flexShrink:0 }}/>
+              <span style={{ fontSize:11, color:C.muted, width:66, flexShrink:0 }}>{e.time}</span>
+              <span style={{ fontSize:13, fontWeight:e.now?700:500, color:e.now?C.accent:C.text }}>{e.title}</span>
+              {e.sub && <span style={{ fontSize:11, color:C.muted }}>{e.sub}</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Shopping list preview */}
+      <div style={{ flex:1, background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:'14px 16px' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:C.muted }}>Shopping</div>
+          <span style={{ fontSize:11, background:C.accent, color:'#0d1117', borderRadius:99, padding:'2px 8px', fontWeight:700 }}>7 items</span>
+        </div>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:'6px 16px' }}>
+          {['Milk (2%)', 'Eggs ×2', 'Avocados', 'Chicken breast', 'Olive oil'].map((item,i)=>(
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:7, width:'calc(50% - 8px)' }}>
+              <div style={{ width:13, height:13, borderRadius:3, border:`1.5px solid ${C.border2}`, flexShrink:0 }}/>
+              <span style={{ fontSize:12, color:C.dim }}>{item}</span>
+            </div>
+          ))}
+          <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>+2 more…</div>
+        </div>
+      </div>
+
+      {/* Commute card */}
+      <div style={{ flex:0.8, background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:'14px 16px' }}>
+        <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:C.muted, marginBottom:10 }}>Commute</div>
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
+            <span style={{ fontSize:13, color:C.dim }}>Home → Office</span>
+            <span style={{ fontSize:22, fontWeight:300, color:C.text }}>28<span style={{ fontSize:12, color:C.dim, marginLeft:2 }}>min</span></span>
+          </div>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
+            <span style={{ fontSize:12, color:C.muted }}>via I-90</span>
+            <span style={{ fontSize:12, color:'#34d399' }}>Moderate traffic</span>
+          </div>
+          <div style={{ height:4, background:C.surface3, borderRadius:2, overflow:'hidden' }}>
+            <div style={{ width:'45%', height:'100%', background:`linear-gradient(90deg, #34d399, #f97316)`, borderRadius:2 }}/>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Sidebar clock ── */
+function SidebarClock() {
+  return (
+    <div style={{ fontFamily:FONT, textAlign:'right', paddingBottom:18, borderBottom:`1px solid ${C.border}`, marginBottom:4 }}>
+      <div style={{ fontSize:54, fontWeight:300, letterSpacing:'-0.04em', lineHeight:1, color:C.text }}>
+        2:20
+        <span style={{ fontSize:24, fontWeight:300, color:C.dim, marginLeft:3 }}>pm</span>
+      </div>
+      <div style={{ fontSize:13, color:C.dim, marginTop:5, letterSpacing:'0.02em' }}>
+        Friday, June 6, 2026
+      </div>
+      <div style={{ height:2, background:C.surface3, borderRadius:2, marginTop:10, overflow:'hidden' }}>
+        <div style={{ width:'60%', height:'100%', background:`linear-gradient(90deg, ${C.accentBg}, ${C.accent})`, borderRadius:2 }}/>
+      </div>
+    </div>
+  );
+}
+
+/* ── Sidebar utility buttons ── */
+const UTIL_BTNS = [
+  { label:'Notes',         badge:3,  icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> },
+  { label:'Shopping',      badge:7,  icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg> },
+  { label:'Timers',        badge:0,  icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> },
+  { label:'Kitchen Ref',   badge:0,  icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg> },
+];
+
+function SidebarUtils() {
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:5, fontFamily:FONT }}>
+      {UTIL_BTNS.map(u=>(
+        <button key={u.label} style={{
+          display:'flex', alignItems:'center', gap:10,
+          padding:'9px 12px',
+          background:'transparent',
+          border:`1px solid ${C.border}`,
+          borderRadius:10,
+          color:C.text, cursor:'pointer',
+          fontFamily:FONT, fontSize:13, fontWeight:500,
+        }}>
+          <div style={{ color:C.dim, flexShrink:0 }}>{u.icon}</div>
+          <span style={{ flex:1, textAlign:'left', color:C.dim }}>{u.label}</span>
+          {u.badge>0 && (
+            <span style={{ background:C.accent, color:'#0d1117', borderRadius:99, fontSize:10, fontWeight:700, padding:'1px 7px', minWidth:20, textAlign:'center', lineHeight:'18px' }}>{u.badge}</span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ── Weather panel ── */
+const HOURLY = [
+  { t:'1PM', temp:74, type:'partly' },
+  { t:'2PM', temp:73, type:'partly' },
+  { t:'3PM', temp:71, type:'cloudy' },
+  { t:'4PM', temp:69, type:'cloudy' },
+  { t:'5PM', temp:67, type:'rain' },
+];
+const DAILY = [
+  { d:'Sat', hi:78, lo:62, type:'partly' },
+  { d:'Sun', hi:82, lo:65, type:'sunny' },
+  { d:'Mon', hi:75, lo:60, type:'rain' },
+];
+
+function WeatherPanel() {
+  return (
+    <div style={{
+      background:C.surface,
+      border:`1px solid ${C.border}`,
+      borderRadius:12,
+      padding:'16px 14px',
+      fontFamily:FONT,
+      display:'flex', flexDirection:'column', gap:14,
+    }}>
+      {/* Current */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+        <div>
+          <div style={{ display:'flex', alignItems:'flex-start', gap:2 }}>
+            <span style={{ fontSize:52, fontWeight:300, letterSpacing:'-0.04em', color:C.text, lineHeight:1 }}>72</span>
+            <span style={{ fontSize:20, fontWeight:300, color:C.dim, marginTop:6 }}>°F</span>
+          </div>
+          <div style={{ fontSize:13, color:C.dim, marginTop:4 }}>Partly Cloudy</div>
+          <div style={{ display:'flex', gap:10, marginTop:6, fontSize:11, color:C.muted }}>
+            <span>Feels 68°</span>
+            <span>·</span>
+            <span>Wind 8 mph</span>
+          </div>
+        </div>
+        <div style={{ color:C.dim, marginTop:4 }}><WIco type="partly" size={44}/></div>
+      </div>
+
+      {/* Hourly */}
+      <div>
+        <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:C.muted, marginBottom:8 }}>Next 5 Hours</div>
+        <div style={{ display:'flex', gap:4 }}>
+          {HOURLY.map((h,i)=>(
+            <div key={i} style={{
+              flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:5,
+              padding:'8px 4px',
+              background:C.surface2, borderRadius:8,
+            }}>
+              <span style={{ fontSize:10, color:C.dim }}>{h.t}</span>
+              <div style={{ color:C.dim, opacity:0.8 }}><WIco type={h.type} size={18}/></div>
+              <span style={{ fontSize:14, fontWeight:600, color:C.text }}>{h.temp}°</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div style={{ height:1, background:C.border }}/>
+
+      {/* 3-day */}
+      <div style={{ display:'flex', flexDirection:'column', gap:9 }}>
+        {DAILY.map((d,i)=>(
+          <div key={i} style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <span style={{ width:28, fontSize:13, fontWeight:500, color:C.dim }}>{d.d}</span>
+            <div style={{ color:C.dim, opacity:0.8 }}><WIco type={d.type} size={17}/></div>
+            <div style={{ flex:1, height:3, borderRadius:2, background:C.surface3, overflow:'hidden' }}>
+              <div style={{ width:`${((d.hi-50)/40)*100}%`, height:'100%', background:`linear-gradient(90deg, ${C.accent}44, ${C.accent}88)`, borderRadius:2 }}/>
+            </div>
+            <span style={{ fontSize:13, fontWeight:600, color:C.text, width:30, textAlign:'right' }}>{d.hi}°</span>
+            <span style={{ fontSize:12, color:C.muted, width:28, textAlign:'right' }}>{d.lo}°</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Miniplayer A — Sidebar card ── */
+function MiniplayerSidebarCard() {
+  return (
+    <div style={{
+      background:C.surface2,
+      border:`1px solid ${C.border}`,
+      borderRadius:12,
+      padding:'12px 14px',
+      fontFamily:FONT,
+    }}>
+      <div style={{ display:'flex', alignItems:'center', gap:11 }}>
+        {/* Album art */}
+        <div style={{
+          width:46, height:46, borderRadius:7, flexShrink:0,
+          background:'linear-gradient(135deg, #1DB954 0%, #0f6b2f 100%)',
+          display:'flex', alignItems:'center', justifyContent:'center',
+        }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M8 15.5c2.5-1 5.5-1 8 0M7 12c3-1.2 7-1.2 10 0M8 8.5c2.5-.8 6-.8 8 0" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+          </svg>
+        </div>
+        {/* Info */}
+        <div style={{ flex:1, overflow:'hidden' }}>
+          <div style={{ fontSize:13, fontWeight:600, color:C.text, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>Golden Hour</div>
+          <div style={{ fontSize:11, color:C.dim, marginTop:2 }}>JVKE · Spotify</div>
+        </div>
+        {/* Controls */}
+        <div style={{ display:'flex', gap:4, alignItems:'center' }}>
+          {[
+            { char:'⏮', active:false },
+            { char:'⏸', active:true },
+            { char:'⏭', active:false },
+          ].map((b,i)=>(
+            <button key={i} style={{
+              width:30, height:30, background:'none', border:'none', cursor:'pointer',
+              color:b.active?C.accent:C.dim,
+              display:'flex', alignItems:'center', justifyContent:'center',
+              fontSize:b.active?17:15, borderRadius:'50%',
+            }}>{b.char}</button>
+          ))}
+        </div>
+      </div>
+      {/* Progress */}
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:10 }}>
+        <span style={{ fontSize:10, color:C.muted, width:26 }}>1:24</span>
+        <div style={{ flex:1, height:3, background:C.surface3, borderRadius:2 }}>
+          <div style={{ width:'38%', height:'100%', background:C.accent, borderRadius:2 }}/>
+        </div>
+        <span style={{ fontSize:10, color:C.muted, width:26, textAlign:'right' }}>3:32</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── Miniplayer B — Floating pill ── */
+function MiniplayerPill({ bottomOffset=0 }) {
+  return (
+    <div style={{
+      position:'absolute',
+      bottom:bottomOffset + 14,
+      left:20,
+      zIndex:50,
+      display:'flex', alignItems:'center', gap:12,
+      background:'rgba(18,24,33,0.96)',
+      backdropFilter:'blur(24px)',
+      border:`1px solid ${C.border2}`,
+      borderRadius:50,
+      padding:'8px 14px 8px 8px',
+      boxShadow:'0 8px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04)',
+      fontFamily:FONT,
+      minWidth:310,
+    }}>
+      {/* Album art circle */}
+      <div style={{
+        width:42, height:42, borderRadius:'50%', flexShrink:0,
+        background:'linear-gradient(135deg, #1DB954 0%, #0f6b2f 100%)',
+        display:'flex', alignItems:'center', justifyContent:'center',
+        boxShadow:'0 2px 12px rgba(29,185,84,0.35)',
+      }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M8 15.5c2.5-1 5.5-1 8 0M7 12c3-1.2 7-1.2 10 0M8 8.5c2.5-.8 6-.8 8 0" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+        </svg>
+      </div>
+      {/* Track info */}
+      <div style={{ flex:1, overflow:'hidden' }}>
+        <div style={{ fontSize:13, fontWeight:600, color:C.text, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', lineHeight:1.3 }}>Golden Hour</div>
+        <div style={{ fontSize:11, color:C.dim, marginTop:1 }}>JVKE</div>
+      </div>
+      {/* Progress dot indicator */}
+      <div style={{ width:48, height:3, background:C.surface3, borderRadius:2, overflow:'hidden', flexShrink:0 }}>
+        <div style={{ width:'38%', height:'100%', background:C.accent, borderRadius:2 }}/>
+      </div>
+      {/* Controls */}
+      <div style={{ display:'flex', gap:4, alignItems:'center' }}>
+        <button style={{ width:32, height:32, background:'none', border:'none', color:C.dim, cursor:'pointer', fontSize:15, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:'50%' }}>⏮</button>
+        <button style={{ width:36, height:36, background:C.accent, border:'none', color:'#0d1117', cursor:'pointer', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:'50%', fontWeight:'bold' }}>⏸</button>
+        <button style={{ width:32, height:32, background:'none', border:'none', color:C.dim, cursor:'pointer', fontSize:15, display:'flex', alignItems:'center', justifyContent:'center', borderRadius:'50%' }}>⏭</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── App bar icons ── */
+const APPS = [
+  { label:'Home',    homeIcon:true },
+  { label:'Spotify', bg:'#1DB954', tc:'white',  glyph:'S' },
+  { label:'YouTube', bg:'#FF0000', tc:'white',  glyph:'▶' },
+  { label:'ESPN',    bg:'#CC0000', tc:'white',  glyph:'E' },
+  { label:'Disney+', bg:'#0E3BC4', tc:'white',  glyph:'D' },
+  { label:'HBO',     bg:'#111',    tc:'#a78bfa',glyph:'M' },
+  { label:'Roku',    bg:'#662D91', tc:'white',  glyph:'R' },
+  { label:'Pluto',   bg:'#0B4FFF', tc:'white',  glyph:'P' },
+];
+
+function AppIcon({ app, sz=32 }) {
+  if (app.homeIcon) return (
+    <div style={{ width:sz, height:sz, display:'flex', alignItems:'center', justifyContent:'center', color:C.dim }}>
+      <svg width={sz*0.72} height={sz*0.72} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </div>
+  );
+  return (
+    <div style={{
+      width:sz, height:sz, borderRadius:sz/5,
+      background:app.bg,
+      display:'flex', alignItems:'center', justifyContent:'center',
+      fontSize:sz*0.38, fontWeight:700,
+      color:app.tc, flexShrink:0,
+      letterSpacing:'-0.02em',
+    }}>{app.glyph}</div>
+  );
+}
+
+function UtilIcon({ icon }) {
+  return (
+    <div style={{ width:32, height:32, display:'flex', alignItems:'center', justifyContent:'center', color:C.dim }}>
+      {icon}
+    </div>
+  );
+}
+
+/* ── App Bar A: Dock style ── */
+function AppBarDock() {
+  const appsIco = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>;
+  const setIco = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+
+  return (
+    <div style={{
+      height:84,
+      background:C.surface,
+      borderTop:`1px solid ${C.border}`,
+      display:'flex', alignItems:'center', justifyContent:'center',
+      fontFamily:FONT,
+    }}>
+      <div style={{
+        display:'flex', alignItems:'center', gap:4,
+        background:'rgba(255,255,255,0.04)',
+        border:`1px solid ${C.border2}`,
+        borderRadius:20,
+        padding:'8px 10px',
+      }}>
+        {APPS.map((app,i)=>(
+          <button key={i} style={{
+            display:'flex', flexDirection:'column', alignItems:'center', gap:5,
+            padding:'7px 10px', background:'none', border:'none', cursor:'pointer', borderRadius:12,
+            minWidth:62,
+          }}>
+            <AppIcon app={app} sz={36}/>
+            <span style={{ fontSize:11, color:C.dim, fontFamily:FONT, fontWeight:500 }}>{app.label}</span>
+          </button>
+        ))}
+        <div style={{ width:1, height:44, background:C.border, margin:'0 6px' }}/>
+        <button style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'7px 10px', background:'none', border:'none', cursor:'pointer', borderRadius:12, minWidth:62 }}>
+          <UtilIcon icon={appsIco}/>
+          <span style={{ fontSize:11, color:C.dim, fontFamily:FONT, fontWeight:500 }}>Apps</span>
+        </button>
+        <button style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'7px 10px', background:'none', border:'none', cursor:'pointer', borderRadius:12, minWidth:62 }}>
+          <UtilIcon icon={setIco}/>
+          <span style={{ fontSize:11, color:C.dim, fontFamily:FONT, fontWeight:500 }}>Settings</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── App Bar B: Refined current style ── */
+function AppBarRefined() {
+  const appsIco = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>;
+  const setIco = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+
+  return (
+    <div style={{
+      height:76,
+      background:C.surface,
+      borderTop:`1px solid ${C.border}`,
+      display:'flex', alignItems:'center', justifyContent:'center',
+      gap:6, padding:'0 24px',
+      fontFamily:FONT,
+    }}>
+      {APPS.map((app,i)=>(
+        <button key={i} style={{
+          display:'flex', flexDirection:'column', alignItems:'center', gap:5,
+          padding:'7px 12px',
+          background: i===0 ? C.accentBg : 'transparent',
+          border:`1px solid ${i===0 ? C.accent+'55' : C.border}`,
+          borderRadius:12, cursor:'pointer', minWidth:68,
+        }}>
+          <AppIcon app={app} sz={30}/>
+          <span style={{ fontSize:11, color:i===0?C.accent:C.dim, fontFamily:FONT, fontWeight:500 }}>{app.label}</span>
+        </button>
+      ))}
+      <div style={{ width:1, height:40, background:C.border, margin:'0 4px' }}/>
+      <button style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'7px 12px', background:'transparent', border:`1px solid ${C.border}`, borderRadius:12, cursor:'pointer', minWidth:68 }}>
+        <UtilIcon icon={appsIco}/><span style={{ fontSize:11, color:C.dim, fontFamily:FONT, fontWeight:500 }}>Apps</span>
+      </button>
+      <button style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:5, padding:'7px 12px', background:'transparent', border:`1px solid ${C.border}`, borderRadius:12, cursor:'pointer', minWidth:68 }}>
+        <UtilIcon icon={setIco}/><span style={{ fontSize:11, color:C.dim, fontFamily:FONT, fontWeight:500 }}>Settings</span>
+      </button>
+    </div>
+  );
+}
+
+/* ── Sports ticker ── */
+const TICKER = [
+  '⚾  Cubs  3  ·  Cardinals  5  —  Final',
+  '🏀  Warriors  98  ·  Celtics  94  —  Live  Q3  4:22',
+  '⚽  LA Galaxy  1  ·  Seattle Sounders  1  —  FT',
+  '🏈  Chiefs  24  ·  Ravens  17  —  3rd  12:32',
+  '⚾  Yankees  7  ·  Red Sox  2  —  Final',
+  '🏒  Avalanche  3  ·  Rangers  2  —  OT',
+];
+
+function SportsTicker() {
+  return (
+    <div style={{
+      height:44,
+      background:'#09090c',
+      borderTop:`1px solid ${C.border}`,
+      display:'flex', alignItems:'center',
+      overflow:'hidden', fontFamily:FONT,
+    }}>
+      <div style={{
+        padding:'0 14px',
+        background:C.accent,
+        height:'100%',
+        display:'flex', alignItems:'center',
+        fontSize:10, fontWeight:700,
+        color:'#0d1117',
+        letterSpacing:'0.1em',
+        flexShrink:0,
+        whiteSpace:'nowrap',
+      }}>SPORTS</div>
+      <div style={{ flex:1, overflow:'hidden', position:'relative' }}>
+        <div style={{
+          display:'flex', gap:48,
+          padding:'0 24px',
+          whiteSpace:'nowrap',
+          animation:'tickerScroll 50s linear infinite',
+        }}>
+          {[...TICKER,...TICKER].map((item,i)=>(
+            <span key={i} style={{ fontSize:13, color:C.dim, flexShrink:0 }}>{item}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Layout A: Sidebar Miniplayer + Dock Bar ── */
+function LayoutA() {
+  return (
+    <div style={{ width:1920, height:1080, background:C.bg, display:'flex', flexDirection:'column', fontFamily:FONT, overflow:'hidden' }}>
+      <div style={{ flex:1, display:'flex', overflow:'hidden' }}>
+        {/* Main content */}
+        <div style={{ flex:1, padding:'20px 12px 20px 22px', display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
+          <CalendarNav/>
+          <DayHeaders/>
+          <CalendarGrid gridH={585}/>
+          <BelowCalendar/>
+        </div>
+        {/* Sidebar */}
+        <div style={{
+          width:284,
+          borderLeft:`1px solid ${C.border}`,
+          background:C.surface,
+          padding:'20px 18px',
+          display:'flex', flexDirection:'column', gap:14,
+          overflow:'hidden', flexShrink:0,
+        }}>
+          <SidebarClock/>
+          <SidebarUtils/>
+          <div style={{ flex:1, minHeight:0, overflow:'hidden' }}>
+            <WeatherPanel/>
+          </div>
+          <MiniplayerSidebarCard/>
+        </div>
+      </div>
+      <AppBarDock/>
+      <SportsTicker/>
+    </div>
+  );
+}
+
+/* ── Layout B: Floating Pill + Refined Bar ── */
+function LayoutB() {
+  return (
+    <div style={{ width:1920, height:1080, background:C.bg, display:'flex', flexDirection:'column', fontFamily:FONT, overflow:'hidden', position:'relative' }}>
+      <div style={{ flex:1, display:'flex', overflow:'hidden' }}>
+        {/* Main content */}
+        <div style={{ flex:1, padding:'20px 12px 20px 22px', display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
+          <CalendarNav/>
+          <DayHeaders/>
+          <CalendarGrid gridH={585}/>
+          <BelowCalendar/>
+        </div>
+        {/* Sidebar — no miniplayer */}
+        <div style={{
+          width:284,
+          borderLeft:`1px solid ${C.border}`,
+          background:C.surface,
+          padding:'20px 18px',
+          display:'flex', flexDirection:'column', gap:14,
+          overflow:'hidden', flexShrink:0,
+        }}>
+          <SidebarClock/>
+          <SidebarUtils/>
+          <div style={{ flex:1, minHeight:0, overflow:'hidden' }}>
+            <WeatherPanel/>
+          </div>
+        </div>
+      </div>
+
+      {/* Floating pill */}
+      <MiniplayerPill bottomOffset={76 + 44}/>
+
+      <AppBarRefined/>
+      <SportsTicker/>
+    </div>
+  );
+}
+
+/* ── Root ── */
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="hub" title="Kitchen Hub — UI Redesign" subtitle={'Dark \u00b7 1920\u00d71080 \u00b7 55" TV \u00b7 Two Approaches'}>
+        <DCArtboard id="a" label="A — Sidebar Miniplayer + Dock Bar" width={1920} height={1080}>
+          <LayoutA/>
+        </DCArtboard>
+        <DCArtboard id="b" label="B — Floating Pill + Refined Bar" width={1920} height={1080}>
+          <LayoutB/>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

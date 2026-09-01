@@ -1,0 +1,189 @@
+<div class="casting-panel" id="casting-panel">
+    <h3>Casting Devices</h3>
+    <div class="casting-controls">
+        <button class="btn btn-primary" hx-get="/api/casting/devices/discover" hx-target="#casting-devices-list" hx-swap="innerHTML">
+            Discover Devices
+        </button>
+        
+        <div id="casting-devices-list" class="mt-3">
+            <!-- Device list will be populated here -->
+        </div>
+    </div>
+</div>
+
+<script>
+// Function to refresh the device list
+function refreshCastingDevices() {
+    fetch('/api/casting/devices')
+        .then(response => response.json())
+        .then(devices => {
+            const container = document.getElementById('casting-devices-list');
+            container.textContent = '';
+            if (devices && devices.length > 0) {
+                const list = document.createElement('ul');
+                list.className = 'list-group';
+                devices.forEach(device => {
+                    const deviceId = device.device_id || '';
+                    const deviceName = device.friendly_name || device.name || 'Unknown device';
+                    const deviceType = device.device_type || 'unknown';
+                    const deviceIp = device.ip_address || 'N/A';
+
+                    const listItem = document.createElement('li');
+                    listItem.className = 'list-group-item';
+
+                    const headerRow = document.createElement('div');
+                    headerRow.className = 'd-flex justify-content-between align-items-center';
+
+                    const infoBlock = document.createElement('div');
+                    const nameEl = document.createElement('strong');
+                    nameEl.textContent = deviceName;
+                    const lineBreak = document.createElement('br');
+                    const meta = document.createElement('small');
+                    meta.className = 'text-muted';
+                    meta.textContent = `Type: ${deviceType} | ${deviceIp}`;
+                    infoBlock.append(nameEl, lineBreak, meta);
+
+                    const buttonGroup = document.createElement('div');
+                    buttonGroup.className = 'btn-group';
+
+                    const playBtn = document.createElement('button');
+                    playBtn.className = 'btn btn-sm btn-outline-primary';
+                    playBtn.textContent = 'Play';
+                    playBtn.addEventListener('click', () => controlDevice(deviceId, 'play'));
+
+                    const pauseBtn = document.createElement('button');
+                    pauseBtn.className = 'btn btn-sm btn-outline-secondary';
+                    pauseBtn.textContent = 'Pause';
+                    pauseBtn.addEventListener('click', () => controlDevice(deviceId, 'pause'));
+
+                    const stopBtn = document.createElement('button');
+                    stopBtn.className = 'btn btn-sm btn-outline-danger';
+                    stopBtn.textContent = 'Stop';
+                    stopBtn.addEventListener('click', () => controlDevice(deviceId, 'stop'));
+
+                    buttonGroup.append(playBtn, pauseBtn, stopBtn);
+                    headerRow.append(infoBlock, buttonGroup);
+
+                    const volumeRow = document.createElement('div');
+                    volumeRow.className = 'mt-2';
+
+                    const volumeInput = document.createElement('input');
+                    volumeInput.type = 'range';
+                    volumeInput.className = 'form-control-range volume-slider';
+                    volumeInput.min = '0';
+                    volumeInput.max = '100';
+                    volumeInput.value = '50';
+                    volumeInput.id = `volume-${deviceId}`;
+                    volumeInput.addEventListener('change', () => setDeviceVolume(deviceId, volumeInput.value));
+
+                    const volumeLabel = document.createElement('label');
+                    volumeLabel.setAttribute('for', volumeInput.id);
+                    volumeLabel.append('Volume: ');
+
+                    const volumeValue = document.createElement('span');
+                    volumeValue.id = `volume-value-${deviceId}`;
+                    volumeValue.textContent = '50';
+
+                    volumeLabel.append(volumeValue, '%');
+                    volumeRow.append(volumeInput, volumeLabel);
+
+                    listItem.append(headerRow, volumeRow);
+                    list.append(listItem);
+                });
+                container.append(list);
+            } else {
+                const empty = document.createElement('p');
+                empty.className = 'text-muted';
+                empty.textContent = 'No casting devices found. Click \"Discover Devices\" to search the network.';
+                container.append(empty);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching casting devices:', error);
+        });
+}
+
+// Function to control a device
+function controlDevice(deviceId, action) {
+    fetch(`/api/casting/devices/${deviceId}/${action}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            media_url: getCurrentMediaUrl() // This would be the media URL to play
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showMessage(`Device control successful: ${data.message}`, 'success');
+        } else {
+            showMessage(`Device control failed: ${data.message || 'Unknown error'}`, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error controlling device:', error);
+        showMessage('Error controlling device', 'error');
+    });
+}
+
+// Function to set device volume
+function setDeviceVolume(deviceId, volume) {
+    document.getElementById(`volume-value-${deviceId}`).textContent = volume;
+    
+    fetch(`/api/casting/devices/${deviceId}/volume`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ volume: parseInt(volume) })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            console.log(`Volume set to ${volume}% for device ${deviceId}`);
+        } else {
+            showMessage(`Failed to set volume: ${data.message || 'Unknown error'}`, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error setting volume:', error);
+        showMessage('Error setting device volume', 'error');
+    });
+}
+
+// Function to get the current media URL (would integrate with media iframe)
+function getCurrentMediaUrl() {
+    // In a real implementation, this would get the URL from the media iframe
+    // For now, we'll return a placeholder
+    return window.currentMediaUrl || 'https://example.com/sample.mp4';
+}
+
+// Function to show messages
+function showMessage(message, type) {
+    // Create a temporary message element
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show`;
+    const messageSpan = document.createElement('span');
+    messageSpan.textContent = message;
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'btn-close';
+    closeButton.setAttribute('data-bs-dismiss', 'alert');
+    alertDiv.append(messageSpan, closeButton);
+    
+    // Add to the top of the casting panel
+    document.getElementById('casting-panel').prepend(alertDiv);
+    
+    // Remove after a few seconds
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+
+// Initial load of device list
+document.addEventListener('DOMContentLoaded', function() {
+    refreshCastingDevices();
+});
+</script>

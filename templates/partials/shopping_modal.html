@@ -1,0 +1,101 @@
+<div id="shopping-modal"
+     class="modal"
+     role="dialog"
+     aria-labelledby="shopping-modal-title"
+     aria-modal="true"
+     data-modal="shopping">
+    <div class="modal-content" role="document">
+        <div class="modal-header" role="heading" aria-level="2" id="shopping-modal-title">
+            <h2 class="modal-title">Shopping List</h2>
+            <div>
+                <span class="item-count" id="shopping-count">({{ active_count if active_count is defined else (items|length if items else 0) }} active)</span>
+                <span class="modal-close" aria-label="Close modal" data-action="close-modal">&times;</span>
+            </div>
+        </div>
+        
+        <div class="modal-body" id="shopping-modal-body" role="document">
+            <div class="form-group">
+                <label for="add-shopping-item-modal" class="sr-only">Item Name</label>
+                <input type="text" id="add-shopping-item-modal" class="form-control" placeholder="Add item..." aria-label="Enter shopping item name in modal">
+            </div>
+            <div class="form-group">
+                <label for="add-shopping-quantity-modal" class="sr-only">Quantity</label>
+                <input type="number" id="add-shopping-quantity-modal" class="form-control" placeholder="Quantity" value="1" min="1" aria-label="Enter quantity for shopping item in modal">
+            </div>
+            <button class="btn btn-block" 
+                    onclick="addShoppingItemModal()"
+                    aria-label="Add item to shopping list in modal">Add Item</button>
+            
+            <div id="shopping-container-modal" role="region" aria-label="Shopping list items in modal">
+                <ul id="shopping-list-modal" class="list-group" role="list" aria-label="List of shopping items in modal">
+                    {% if items %}
+                        {% for item in items %}
+                            <li class="list-group-item shopping-modal-item {% if item.done %}done{% endif %}" id="item-modal-{{ item.id }}" role="listitem" aria-label="{{ 'Completed ' if item.done else 'Uncompleted ' }}{{ item.qty if item.qty else '1' }} x {{ item.text }}">
+                                <div class="shopping-modal-row">
+                                    <div class="shopping-modal-main">
+                                        <input type="checkbox" 
+                                               id="checkbox-modal-{{ item.id }}"
+                                               class="shopping-checkbox" 
+                                               {% if item.done %}checked{% endif %}
+                                               onchange="toggleShoppingItemModal({{ item.id }}, this.checked)"
+                                               aria-label="Mark {{ item.text }} as {% if item.done %}not completed{% else %}completed{% endif %} in modal">
+                                        <label for="checkbox-modal-{{ item.id }}" class="shopping-text {% if item.done %}line-through{% endif %}" aria-hidden="true">
+                                            {% if item.qty %}{{ item.qty }} x {% endif %}{{ item.text }}
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="shopping-actions" role="group" aria-label="Shopping item actions in modal">
+                                        <button class="btn btn-sm"
+                                                onclick="editShoppingItemModal({{ item.id }}, '{{ item.text }}', {{ item.qty or 1 }})"
+                                                aria-label="Edit shopping item: {{ item.text[:50] if item.text|length > 50 else item.text }} in modal">
+                                            <i class="icon icon-pencil" aria-hidden="true"></i>
+                                            <span class="sr-only">Edit</span>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger"
+                                                onclick="deleteShoppingItemModal({{ item.id }})"
+                                                aria-label="Delete shopping item: {{ item.text[:50] if item.text|length > 50 else item.text }} in modal">
+                                            <i class="icon icon-trash" aria-hidden="true"></i>
+                                            <span class="sr-only">Delete</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    {% else %}
+                        <li class="list-group-item" role="listitem" aria-label="No shopping items available">No items yet</li>
+                    {% endif %}
+                </ul>
+                
+                {% if items %}
+                <div class="form-group">
+                    <button type="button" 
+                            class="btn btn-danger btn-block"
+                            hx-post="/api/shopping/clear-all"
+                            hx-confirm="Are you sure you want to clear all shopping items?"
+                            hx-target="#shopping-list-modal"
+                            hx-swap="outerHTML"
+                            hx-on:htmx:after-request="if(event.detail.successful) { 
+                                const modal = event.target.closest('.modal'); 
+                                if(modal) { 
+                                    htmx.ajax('GET', '/partials/shopping-modal', {target: modal, swap: 'outerHTML'}); 
+                                }
+                                if (typeof requestSidebarBadgeRefresh === 'function') { requestSidebarBadgeRefresh(); }
+                            }"
+                            aria-label="Clear all shopping list items in modal">
+                        Clear All
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button type="button"
+                    class="btn"
+                    data-action="close-modal"
+                    aria-label="Close modal">
+                Close
+            </button>
+        </div>
+    </div>
+</div>

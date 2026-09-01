@@ -1,0 +1,212 @@
+apps:
+- action: switch_view
+  icon: calendar.svg
+  id: home
+  label: Home
+  target: week_calendar
+- action: open_tab
+  icon: spotify.svg
+  id: spotify
+  label: Spotify
+  url: https://open.spotify.com/
+- action: open_iframe
+  icon: youtube.svg
+  id: youtube
+  label: YouTube
+  url: https://www.youtube.com/
+- action: open_tab
+  icon: sports.svg
+  id: espn
+  label: ESPN
+  url: https://www.espn.com/watch/
+- action: open_tab
+  icon: disney.svg
+  id: disney
+  label: Disney+
+  url: https://www.disneyplus.com/
+- action: open_tab
+  icon: hbo.svg
+  id: hbo_max
+  label: HBO Max
+  url: https://www.max.com/
+- action: open_iframe
+  icon: roku.svg
+  id: roku
+  label: Roku
+  url: https://therokuchannel.roku.com/
+- action: open_tab
+  icon: pluto.svg
+  id: pluto
+  label: Pluto
+  url: https://pluto.tv/
+local_apps: []
+extra_apps: []
+casting:
+  auto_discover: false
+  default_volume: 50
+  devices: []
+  discovery_enabled: false
+  discovery_interval: 300
+  enabled: false
+features:
+  auth: false
+  kiosk: true
+  voice: false
+  plugins: false
+layout:
+  main_view: week_calendar
+  sidebar:
+  - notes
+  - shopping
+  - timers
+  - weather
+  - sports
+commute:
+  enabled: false
+  provider: mapbox
+  always_visible: false
+  home_address: ''
+  work_address: ''
+  morning_window:
+    start: 06:00
+    end: 09:00
+  evening_window:
+    start: '16:30'
+    end: '18:30'
+  refresh_minutes: 2
+  google_api_key: ''
+  mapbox_token: ''
+music:
+  enabled: true
+  local_path: ./instance/music
+  providers:
+    radio_browser:
+      enabled: false
+      base_url: https://de1.api.radio-browser.info
+      default_presets: []
+    somafm:
+      enabled: false
+      catalog_url: https://somafm.com/channels.json
+    podcast_index:
+      enabled: false
+      api_base_url: https://api.podcastindex.org/api/1.0
+      api_key: ''
+      api_secret: ''
+  spotify:
+    client_id: ''
+    client_secret: ''
+    redirect_uri: http://127.0.0.1:5000/integrations/spotify/callback
+    enable_library_sync: false
+    sync_cooldown_minutes: 360
+    sync_saved_tracks: false
+    scopes:
+    - user-library-read
+    - playlist-read-private
+    - playlist-read-collaborative
+    - user-read-playback-state
+    - user-modify-playback-state
+    - user-read-recently-played
+    enabled: false
+  sync_enabled: false
+  volume: 70
+media:
+  enabled: true
+  launcher_endpoint: http://127.0.0.1:7666/v1/open_media
+  allowed_domains:
+  - localhost
+  - 127.0.0.1
+  - youtube.com
+  - youtu.be
+  - twitch.tv
+  - pluto.tv
+  - roku.com
+  - roku.tv
+  - vimeo.com
+  - dailymotion.com
+  - tubitv.com
+  - spotify.com
+  - disneyplus.com
+  - max.com
+  - espn.com
+  - photos.google.com
+  - google.com
+  - therokuchannel.roku.com
+photos:
+  enabled: false
+  google_photos:
+    client_id: ''
+    client_secret: ''
+    enabled: false
+    refresh_token: ''
+  local_path: ./instance/photos
+  slideshow_interval: 5
+  sync_enabled: false
+providers:
+  calendar:
+    google:
+      calendar_ids:
+      - primary
+      client_id: ''
+      client_secret: ''
+    ics_url: https://example.com/family.ics
+    kind: ics
+  sports:
+    api_key: ''
+    favorite_teams: []
+    kind: espn
+  weather:
+    kind: open_meteo
+    location:
+      name: Your City
+      lat: 0.0
+      lon: 0.0
+security:
+  admin_rate_limit: 10 per minute
+  default_rate_limit: 60 per minute
+  ip_whitelist: []
+  ip_whitelist_enabled: false
+  rate_limit_enabled: true
+  rate_limit_storage_uri: memory://
+  secure_headers: true
+  session_timeout: 3600
+  socketio_allowed_origins:
+  - http://127.0.0.1:5000
+  - http://localhost:5000
+  ssl_cert_path: null
+  ssl_enabled: false
+  ssl_key_path: null
+ui:
+  density: compact
+  theme: auto
+external_api_limits:
+  spotify: 12 per minute
+webhooks: []
+chores:
+  enabled: false
+  default_assignee: family
+  reminder_hours_before: 24
+  recurring_enabled: true
+  default_priority: normal
+  family_members:
+  - parent
+  - child1
+  - child2
+iot:
+  enabled: false
+  discovery_enabled: false
+  discovery_interval: 300
+  default_timeout: 10
+  alexa_enabled: false
+  google_home_enabled: false
+  supported_device_types:
+  - alexa
+  - google_home
+  - google_cast
+services:
+  weather_alerts: false
+  webhooks: false
+  update_checks: false
+plugin_config:
+  enabled: false
+  auto_update: false
+  allow_unsafe: false

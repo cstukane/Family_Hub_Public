@@ -1,0 +1,35 @@
+{% set active_items = (items | rejectattr('done')) | list if items else [] %}
+{% set visible_limit = 6 %}
+{% set visible_items = active_items[:visible_limit] %}
+{% set remaining = (active_items | length) - (visible_items | length) %}
+{% set has_items = active_items | length > 0 %}
+{% set shopping_count = active_count if active_count is defined else (active_items | length) %}
+
+<span id="shopping-tile-badge" class="tile-badge {% if not has_items %}hidden{% endif %}" hx-swap-oob="true">{{ shopping_count ~ ' items' if has_items else '' }}</span>
+
+<div class="shopping-tile-body {% if not has_items %}is-empty{% endif %}" data-shopping-state="{{ 'ready' if has_items else 'empty' }}" aria-live="polite">
+    {% if visible_items %}
+        <ul class="shopping-tile-list" role="list" aria-label="Shopping list items">
+            {% for item in visible_items %}
+                <li class="shopping-tile-item" role="listitem">
+                    {% if item.qty %}<span class="shopping-tile-qty">{{ item.qty }}&times;</span>{% endif %}
+                    <span class="shopping-tile-text">{{ item.text }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+        {% if remaining > 0 %}
+            <div class="shopping-tile-more">+{{ remaining }} more item{{ 's' if remaining != 1 else '' }}</div>
+        {% endif %}
+    {% else %}
+        <div class="shopping-tile-empty-state">
+            <div class="shopping-tile-empty">No items on the list</div>
+            <div class="shopping-tile-empty-hint">Tap to add an item</div>
+            <button type="button"
+                class="shopping-tile-empty-action"
+                onclick="event.stopPropagation(); loadAndShowModal('/partials/shopping-modal')"
+                aria-label="Open shopping list and add an item">
+                + Add item
+            </button>
+        </div>
+    {% endif %}
+</div>
