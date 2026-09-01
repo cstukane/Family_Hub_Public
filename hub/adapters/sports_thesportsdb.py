@@ -1,4 +1,4 @@
-"""TheSportsDB adapter for the Kitchen Hub application."""
+"""TheSportsDB adapter for the Family Hub application."""
 
 import logging
 from datetime import datetime

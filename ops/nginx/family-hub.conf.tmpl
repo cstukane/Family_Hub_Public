@@ -1,4 +1,4 @@
-# Nginx configuration template for Kitchen Hub with SSL/TLS and Let's Encrypt
+# Nginx configuration template for Family Hub with SSL/TLS and Let's Encrypt
 
 # HTTP server to redirect to HTTPS
 server {
@@ -93,7 +93,7 @@ server {
     
     # Static files (if served directly by nginx in production)
     location /static {
-        alias /opt/kitchen-hub/static;
+        alias /opt/family-hub/static;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }

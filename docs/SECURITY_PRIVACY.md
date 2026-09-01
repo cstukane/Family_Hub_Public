@@ -27,10 +27,10 @@ full web app and harden the deployment.
 - **Socket.IO**: Use `SOCKETIO_ALLOWED_ORIGINS` or `security.socketio_allowed_origins` to
   restrict browser origins.
 
-## Media launcher service
+## Media launcher service (dormant in Public V1)
 
-- Runs locally on `127.0.0.1:7666`.
-- Uses JWT auth by default (`Authorization: Bearer <token>`).
+- The child-window media launcher service is disabled by default in the Public Edition.
+- When enabled, it runs locally and uses JWT auth by default (`Authorization: Bearer <token>`).
 - Legacy header auth can be enabled with `MEDIA_LAUNCHER_ALLOW_LEGACY_AUTH=true` and
   `MEDIA_HUB_AUTH_TOKEN`, but this is not recommended for production.
 - Allowed media domains are controlled by `config/media_whitelist.json`.
@@ -39,7 +39,7 @@ full web app and harden the deployment.
 
 - Copy `config.example.yaml` to ignored `instance/config.yaml`; never commit household settings.
 - Put secrets in ignored `instance/.env`; use the documented environment overrides.
-- Rotate tokens periodically (Spotify refresh tokens, Google credentials, webhook secrets).
+- Rotate tokens periodically (Google credentials, webhook secrets).
 - Restrict file permissions on `instance/.env` in production (example: `chmod 600`).
 
 ## Monitoring

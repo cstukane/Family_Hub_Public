@@ -1,4 +1,4 @@
-"""ESPN adapter for the Kitchen Hub application."""
+"""ESPN adapter for the Family Hub application."""
 
 import logging
 from datetime import datetime

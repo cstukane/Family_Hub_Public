@@ -1,5 +1,5 @@
 """
-Security sandbox for Kitchen Hub plugins.
+Security sandbox for Family Hub plugins.
 Provides a secure execution environment for untrusted plugin code.
 """
 

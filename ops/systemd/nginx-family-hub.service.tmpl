@@ -1,7 +1,7 @@
 [Unit]
-Description=nginx - high performance web server for Kitchen Hub
+Description=nginx - high performance web server for Family Hub
 After=network.target
-After=kitchen-hub@%i.service
+After=family-hub@%i.service
 
 [Service]
 Type=forking
@@ -13,4 +13,4 @@ ExecStop=/usr/sbin/nginx -s stop
 
 [Install]
 WantedBy=multi-user.target
-Also=kitchen-hub@%i.service kitchen-hub-kiosk@%i.service
+Also=family-hub@%i.service family-hub-kiosk@%i.service

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login - Kitchen Hub</title>
+    <title>Admin Login - Family Hub</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     <style>
         .login-container {
@@ -68,7 +68,7 @@
         <form class="login-form" id="adminLoginForm">
             <div class="login-header">
                 <h1>Admin Login</h1>
-                <p>Enter your admin credentials to access the Kitchen Hub admin panel</p>
+                <p>Enter your admin credentials to access the Family Hub admin panel</p>
             </div>
             
             {% if config.security.admin_enabled and config.security.admin_username %}

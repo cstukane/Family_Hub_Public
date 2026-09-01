@@ -1,5 +1,5 @@
 """
-Plugin manager for the Kitchen Hub application.
+Plugin manager for the Family Hub application.
 Handles loading, enabling, disabling, and managing plugins.
 """
 
@@ -30,7 +30,7 @@ class PluginLoadResult:
 
 class PluginManager:
     """
-    Manages the lifecycle of plugins in the Kitchen Hub application.
+    Manages the lifecycle of plugins in the Family Hub application.
     Handles loading, enabling, disabling, and unloading of plugins.
     """
 

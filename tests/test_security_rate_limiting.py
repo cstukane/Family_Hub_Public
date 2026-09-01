@@ -1,5 +1,5 @@
 """
-Test script for rate limiting functionality in Kitchen Hub
+Test script for rate limiting functionality in Family Hub
 """
 
 import os

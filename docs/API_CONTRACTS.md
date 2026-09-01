@@ -3,7 +3,7 @@
 Base URLs:
 
 - Hub app (default): `http://<host>:5000`
-- Media launcher service: `http://127.0.0.1:7666`
+- Media launcher service: dormant in Public V1 (was `http://127.0.0.1:7666`)
 
 Common behavior:
 
@@ -15,7 +15,7 @@ Common behavior:
 ## Views (HTML)
 
 - `GET /` main dashboard
-- `GET /view/<name>` switch central view (calendar, photos, music, ambient, sports)
+- `GET /view/<name>` switch central view (calendar, sports)
 - `GET /view/cooking` cooking mode
 - `GET /settings` settings page
 - ~~`GET /status`~~ Removed 2026-06-14 (deleted with metrics subsystem)
@@ -26,7 +26,7 @@ Common behavior:
 - `GET /admin/diagnostics` admin diagnostics UI
 - `GET /admin/system` admin system UI
 - `GET /admin/updates` admin updates UI
-- `GET /integrations/spotify/callback` Spotify OAuth callback
+- `GET /integrations/spotify/callback` Spotify OAuth callback (if enabled)
 
 ## Partials (HTMX HTML)
 
@@ -93,15 +93,13 @@ Common behavior:
 - `GET /api/oauth/google` start Google OAuth
 - `GET /api/oauth/google/callback` finish OAuth
 
-## Media launcher (hub -> launcher)
+## Media launcher (dormant in Public V1)
 
-Media launcher endpoints require `Authorization: Bearer <jwt>` unless legacy auth is enabled.
+The child-window media launcher service is disabled by default. When enabled, endpoints require `Authorization: Bearer <jwt>` unless legacy auth is enabled.
 
-- `POST http://127.0.0.1:7666/v1/open_media`
-  - `{ "url": "https://...", "position": [x,y], "size": [w,h], "controller": true }`
-- `POST http://127.0.0.1:7666/v1/close_media`
-- `GET http://127.0.0.1:7666/v1/media_status`
-- `GET http://127.0.0.1:7666/health`
+- `POST /api/media/open` proxy to launcher service
+- `POST /api/media/close` proxy to launcher service
+- `POST /api/launch` launch an app by config ID (iframe fallback)
 
 ## Weather and status
 

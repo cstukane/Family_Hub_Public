@@ -10,8 +10,8 @@ It is a styling contract, not a component copy guide. The export is a visual ref
 - Current theme and component tokens in [`static/css/base.css`](/static/css/base.css)
 - Product direction in [`PRODUCT_DIRECTION.md`](/PRODUCT_DIRECTION.md), [`docs/UI_SPEC.md`](/docs/UI_SPEC.md), and [`docs/Layout_Update_Plan.md`](/docs/Layout_Update_Plan.md)
 - Claude Design export files:
-  - [`Kitchen Hub Redesign.html`](/docs/design/claude-design-family-hub/Kitchen%20Hub%20Redesign.html)
-  - [`Kitchen Hub Redesign v2.html`](/docs/design/claude-design-family-hub/Kitchen%20Hub%20Redesign%20v2.html)
+  - [`Family Hub Redesign.html`](/docs/design/claude-design-family-hub/Family%20Hub%20Redesign.html)
+  - [`Family Hub Redesign v2.html`](/docs/design/claude-design-family-hub/Family%20Hub%20Redesign%20v2.html)
   - [`design-canvas.jsx`](/docs/design/claude-design-family-hub/design-canvas.jsx)
   - [`postcards.jsx`](/docs/design/claude-design-family-hub/postcards.jsx)
   - [`fixes.jsx`](/docs/design/claude-design-family-hub/fixes.jsx)
@@ -28,7 +28,7 @@ The export’s usable direction is a calm, dark, TV-first control surface:
 - Dense but readable card layout built for a 1920x1080 always-on screen
 - “Quiet appliance” feel rather than consumer-app gloss
 
-The best reference is the pair of `Kitchen Hub Redesign` artboards. The `design-canvas` wrapper, `postcards`, `fixes`, and `lowlight` files are support material, not Family Hub UI structure.
+The best reference is the pair of `Family Hub Redesign` artboards. The `design-canvas` wrapper, `postcards`, `fixes`, and `lowlight` files are support material, not Family Hub UI structure.
 
 ## Core Tokens
 

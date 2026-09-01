@@ -1,10 +1,10 @@
 {
   "updated_at": "2024-01-15T14:30:00+00:00",
   "meta": {
-    "timezone": "America/New_York",
+    "timezone": "UTC",
     "cache_age_seconds": 120,
     "stale": false,
-    "favorites": ["NYY", "BOS", "LAL", "GSW"],
+    "favorites": ["FAV", "BOS", "LAL", "GSW"],
     "source": "espn-scoreboard-v1",
     "fetch_error_reason": null
   },
@@ -13,18 +13,18 @@
       "id": "401234567",
       "league": "NBA",
       "status": "in_progress",
-      "start_time": "2024-01-15T19:30:00-05:00",
+      "start_time": "2024-01-15T19:30:00+00:00",
       "start_time_utc": "2024-01-16T00:30:00+00:00",
       "time_remaining": "8:42",
       "quarter": "Q3",
       "home_team": {
-        "name": "New York Knicks",
-        "abbreviation": "NYK",
+        "name": "Home Team",
+        "abbreviation": "HOM",
         "score": 89
       },
       "away_team": {
-        "name": "Boston Celtics",
-        "abbreviation": "BOS",
+        "name": "Away Team",
+        "abbreviation": "AWY",
         "score": 84
       },
       "home_score": 89,
@@ -36,18 +36,18 @@
       "id": "401234568",
       "league": "MLB",
       "status": "scheduled",
-      "start_time": "2024-01-15T20:05:00-05:00",
+      "start_time": "2024-01-15T20:05:00+00:00",
       "start_time_utc": "2024-01-16T01:05:00+00:00",
       "time_remaining": null,
       "quarter": null,
       "home_team": {
-        "name": "New York Yankees",
-        "abbreviation": "NYY",
+        "name": "Home Team",
+        "abbreviation": "HOM",
         "score": null
       },
       "away_team": {
-        "name": "Boston Red Sox",
-        "abbreviation": "BOS",
+        "name": "Away Team",
+        "abbreviation": "AWY",
         "score": null
       },
       "home_score": null,
@@ -59,18 +59,18 @@
       "id": "401234569",
       "league": "NHL",
       "status": "final",
-      "start_time": "2024-01-14T19:00:00-05:00",
+      "start_time": "2024-01-14T19:00:00+00:00",
       "start_time_utc": "2024-01-15T00:00:00+00:00",
       "time_remaining": null,
       "quarter": "Final",
       "home_team": {
-        "name": "New York Rangers",
-        "abbreviation": "NYR",
+        "name": "Home Team",
+        "abbreviation": "HOM",
         "score": 4
       },
       "away_team": {
-        "name": "New Jersey Devils",
-        "abbreviation": "NJD",
+        "name": "Away Team",
+        "abbreviation": "AWY",
         "score": 3
       },
       "home_score": 4,
@@ -82,18 +82,18 @@
       "id": "401234570",
       "league": "NBA",
       "status": "in_progress",
-      "start_time": "2024-01-15T22:30:00-05:00",
+      "start_time": "2024-01-15T22:30:00+00:00",
       "start_time_utc": "2024-01-16T03:30:00+00:00",
       "time_remaining": "5:21",
       "quarter": "Q4",
       "home_team": {
-        "name": "Los Angeles Lakers",
-        "abbreviation": "LAL",
+        "name": "Home Team",
+        "abbreviation": "HOM",
         "score": 98
       },
       "away_team": {
-        "name": "Golden State Warriors",
-        "abbreviation": "GSW",
+        "name": "Away Team",
+        "abbreviation": "AWY",
         "score": 95
       },
       "home_score": 98,
@@ -105,18 +105,18 @@
       "id": "401234571",
       "league": "NFL",
       "status": "final",
-      "start_time": "2024-01-14T20:20:00-05:00",
+      "start_time": "2024-01-14T20:20:00+00:00",
       "start_time_utc": "2024-01-15T01:20:00+00:00",
       "time_remaining": null,
       "quarter": "Final",
       "home_team": {
-        "name": "Buffalo Bills",
-        "abbreviation": "BUF",
+        "name": "Home Team",
+        "abbreviation": "HOM",
         "score": 24
       },
       "away_team": {
-        "name": "Miami Dolphins",
-        "abbreviation": "MIA",
+        "name": "Away Team",
+        "abbreviation": "AWY",
         "score": 17
       },
       "home_score": 24,
@@ -128,18 +128,18 @@
       "id": "401234572",
       "league": "MLB",
       "status": "scheduled",
-      "start_time": "2024-01-16T13:05:00-05:00",
+      "start_time": "2024-01-16T13:05:00+00:00",
       "start_time_utc": "2024-01-16T18:05:00+00:00",
       "time_remaining": null,
       "quarter": null,
       "home_team": {
-        "name": "Toronto Blue Jays",
-        "abbreviation": "TOR",
+        "name": "Home Team",
+        "abbreviation": "HOM",
         "score": null
       },
       "away_team": {
-        "name": "Tampa Bay Rays",
-        "abbreviation": "TB",
+        "name": "Away Team",
+        "abbreviation": "AWY",
         "score": null
       },
       "home_score": null,
@@ -151,18 +151,18 @@
       "id": "401234573",
       "league": "NBA",
       "status": "in_progress",
-      "start_time": "2024-01-15T19:00:00-05:00",
+      "start_time": "2024-01-15T19:00:00+00:00",
       "start_time_utc": "2024-01-16T00:00:00+00:00",
       "time_remaining": "4:15",
       "quarter": "Q4",
       "home_team": {
-        "name": "Brooklyn Nets",
-        "abbreviation": "BKN",
+        "name": "Home Team",
+        "abbreviation": "HOM",
         "score": 102
       },
       "away_team": {
-        "name": "Miami Heat",
-        "abbreviation": "MIA",
+        "name": "Away Team",
+        "abbreviation": "AWY",
         "score": 105
       },
       "home_score": 102,
@@ -174,18 +174,18 @@
       "id": "401234574",
       "league": "NBA",
       "status": "final",
-      "start_time": "2024-01-15T18:00:00-05:00",
+      "start_time": "2024-01-15T18:00:00+00:00",
       "start_time_utc": "2024-01-15T23:00:00+00:00",
       "time_remaining": null,
       "quarter": "Final OT",
       "home_team": {
-        "name": "Phoenix Suns",
-        "abbreviation": "PHX",
+        "name": "Home Team",
+        "abbreviation": "HOM",
         "score": 112
       },
       "away_team": {
-        "name": "Los Angeles Lakers",
-        "abbreviation": "LAL",
+        "name": "Away Team",
+        "abbreviation": "AWY",
         "score": 108
       },
       "home_score": 112,
@@ -197,18 +197,18 @@
       "id": "401234575",
       "league": "MLB",
       "status": "scheduled",
-      "start_time": "2024-01-16T20:10:00-05:00",
+      "start_time": "2024-01-16T20:10:00+00:00",
       "start_time_utc": "2024-01-17T01:10:00+00:00",
       "time_remaining": null,
       "quarter": null,
       "home_team": {
-        "name": "Boston Red Sox",
-        "abbreviation": "BOS",
+        "name": "Home Team",
+        "abbreviation": "HOM",
         "score": null
       },
       "away_team": {
-        "name": "Milwaukee Brewers",
-        "abbreviation": "MIL",
+        "name": "Away Team",
+        "abbreviation": "AWY",
         "score": null
       },
       "home_score": null,
@@ -220,18 +220,18 @@
       "id": "401234576",
       "league": "NHL",
       "status": "in_progress",
-      "start_time": "2024-01-15T21:00:00-05:00",
+      "start_time": "2024-01-15T21:00:00+00:00",
       "start_time_utc": "2024-01-16T02:00:00+00:00",
       "time_remaining": "2:10",
       "quarter": "3rd",
       "home_team": {
-        "name": "Boston Bruins",
-        "abbreviation": "BOS",
+        "name": "Home Team",
+        "abbreviation": "HOM",
         "score": 2
       },
       "away_team": {
-        "name": "Toronto Maple Leafs",
-        "abbreviation": "TOR",
+        "name": "Away Team",
+        "abbreviation": "AWY",
         "score": 3
       },
       "home_score": 2,

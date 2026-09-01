@@ -1,5 +1,5 @@
 """
-Plugin marketplace system for Kitchen Hub.
+Plugin marketplace system for Family Hub.
 Handles plugin discovery, installation, and updates.
 """
 

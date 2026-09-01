@@ -25,37 +25,37 @@ gen-systemd:
 	./scripts/gen_systemd.sh
 
 deploy: gen-systemd deploy-setup
-	@echo "Enabling and starting Kitchen Hub services..."
-	sudo systemctl enable kitchen-hub@${USER}.service
-	sudo systemctl enable kitchen-hub-kiosk@${USER}.service
-	sudo systemctl start kitchen-hub@${USER}.service
-	sudo systemctl start kitchen-hub-kiosk@${USER}.service
+	@echo "Enabling and starting Family Hub services..."
+	sudo systemctl enable family-hub@${USER}.service
+	sudo systemctl enable family-hub-kiosk@${USER}.service
+	sudo systemctl start family-hub@${USER}.service
+	sudo systemctl start family-hub-kiosk@${USER}.service
 
 deploy-nginx: gen-systemd deploy-setup
-	@echo "Setting up nginx reverse proxy for Kitchen Hub..."
+	@echo "Setting up nginx reverse proxy for Family Hub..."
 	@if [ ! -f scripts/gen_nginx_config.sh ]; then \
 		echo "Creating nginx config generation script..."; \
 		echo '#!/bin/bash' > scripts/gen_nginx_config.sh; \
 		echo '# Script to generate nginx configuration from template' >> scripts/gen_nginx_config.sh; \
 		echo 'DOMAIN=${1:-localhost}' >> scripts/gen_nginx_config.sh; \
 		echo 'sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled' >> scripts/gen_nginx_config.sh; \
-		echo 'sudo cp /opt/kitchen-hub/ops/nginx/kitchen-hub.conf.tmpl /tmp/kitchen-hub.conf' >> scripts/gen_nginx_config.sh; \
-		echo 'sudo sed -i "s/{{SERVER_NAME}}/$DOMAIN/g" /tmp/kitchen-hub.conf' >> scripts/gen_nginx_config.sh; \
-		echo 'sudo sed -i "s|{{SSL_CERT_PATH}}|/etc/letsencrypt/live/$DOMAIN/fullchain.pem|g" /tmp/kitchen-hub.conf' >> scripts/gen_nginx_config.sh; \
-		echo 'sudo sed -i "s|{{SSL_KEY_PATH}}|/etc/letsencrypt/live/$DOMAIN/privkey.pem|g" /tmp/kitchen-hub.conf' >> scripts/gen_nginx_config.sh; \
-		echo 'sudo mv /tmp/kitchen-hub.conf /etc/nginx/sites-available/kitchen-hub.conf' >> scripts/gen_nginx_config.sh; \
-		echo 'sudo ln -sf /etc/nginx/sites-available/kitchen-hub.conf /etc/nginx/sites-enabled/kitchen-hub.conf' >> scripts/gen_nginx_config.sh; \
+		echo 'sudo cp /opt/family-hub/ops/nginx/family-hub.conf.tmpl /tmp/family-hub.conf' >> scripts/gen_nginx_config.sh; \
+		echo 'sudo sed -i "s/{{SERVER_NAME}}/$DOMAIN/g" /tmp/family-hub.conf' >> scripts/gen_nginx_config.sh; \
+		echo 'sudo sed -i "s|{{SSL_CERT_PATH}}|/etc/letsencrypt/live/$DOMAIN/fullchain.pem|g" /tmp/family-hub.conf' >> scripts/gen_nginx_config.sh; \
+		echo 'sudo sed -i "s|{{SSL_KEY_PATH}}|/etc/letsencrypt/live/$DOMAIN/privkey.pem|g" /tmp/family-hub.conf' >> scripts/gen_nginx_config.sh; \
+		echo 'sudo mv /tmp/family-hub.conf /etc/nginx/sites-available/family-hub.conf' >> scripts/gen_nginx_config.sh; \
+		echo 'sudo ln -sf /etc/nginx/sites-available/family-hub.conf /etc/nginx/sites-enabled/family-hub.conf' >> scripts/gen_nginx_config.sh; \
 		echo 'sudo nginx -t && echo "Nginx configuration test passed"' >> scripts/gen_nginx_config.sh; \
 		echo 'sudo systemctl restart nginx' >> scripts/gen_nginx_config.sh; \
 		echo 'echo "Nginx configuration updated for domain: $DOMAIN"' >> scripts/gen_nginx_config.sh; \
 		chmod +x scripts/gen_nginx_config.sh; \
 	fi
-	sudo cp ops/nginx/kitchen-hub.conf.tmpl /opt/kitchen-hub/ops/nginx/kitchen-hub.conf.tmpl
+	sudo cp ops/nginx/family-hub.conf.tmpl /opt/family-hub/ops/nginx/family-hub.conf.tmpl
 	./scripts/gen_nginx_config.sh
-	sudo systemctl enable kitchen-hub@${USER}.service
-	sudo systemctl enable kitchen-hub-kiosk@${USER}.service
-	sudo systemctl start kitchen-hub@${USER}.service
-	sudo systemctl start kitchen-hub-kiosk@${USER}.service
+	sudo systemctl enable family-hub@${USER}.service
+	sudo systemctl enable family-hub-kiosk@${USER}.service
+	sudo systemctl start family-hub@${USER}.service
+	sudo systemctl start family-hub-kiosk@${USER}.service
 
 deploy-ssl:
 	@echo "Setting up SSL with Let's Encrypt..."
@@ -68,9 +68,9 @@ deploy-ssl:
 	@echo "Usage: sudo ./scripts/setup_ssl.sh your-domain.com your-email@example.com"
 
 deploy-with-ssl: deploy-nginx deploy-ssl
-	@echo "Kitchen Hub deployed with SSL support!"
+	@echo "Family Hub deployed with SSL support!"
 
 deploy-test:
-	@echo "Testing Kitchen Hub installation..."
+	@echo "Testing Family Hub installation..."
 	curl -f http://localhost:5000/health || { echo "Health check failed"; exit 1; }
 	@echo "Health check passed"

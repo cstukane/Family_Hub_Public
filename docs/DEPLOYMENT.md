@@ -14,8 +14,8 @@ This guide covers common deployment paths for Family Hub.
 ```bash
 sudo apt update
 sudo apt install -y python3 python3-venv chromium-browser nginx
-sudo git clone <repository-url> /opt/kitchen-hub
-cd /opt/kitchen-hub
+sudo git clone <repository-url> /opt/family-hub
+cd /opt/family-hub
 make venv
 make install
 ```
@@ -30,14 +30,14 @@ chmod 600 instance/config.yaml instance/.env
 ```
 
 The generated systemd unit explicitly sets
-`FAMILY_HUB_CONFIG=/opt/kitchen-hub/instance/config.yaml`. Production therefore
+`FAMILY_HUB_CONFIG=/opt/family-hub/instance/config.yaml`. Production therefore
 fails clearly if the deployment config is missing instead of using the safe
 example configuration.
 
 > **Existing install migration:** copy the former root `config.yaml` to
-> `/opt/kitchen-hub/instance/config.yaml`, move secret overrides to
-> `/opt/kitchen-hub/instance/.env`, set both files to mode `600`, regenerate the
-> units with `make gen-systemd`, and restart `kitchen-hub@<user>.service`.
+> `/opt/family-hub/instance/config.yaml`, move secret overrides to
+> `/opt/family-hub/instance/.env`, set both files to mode `600`, regenerate the
+> units with `make gen-systemd`, and restart `family-hub@<user>.service`.
 
 ### Generate systemd services and deploy
 ```bash
@@ -62,8 +62,8 @@ sudo ./scripts/setup_ssl.sh your-domain.com your-email@example.com
 ```bash
 sudo apt update
 sudo apt install -y chromium-browser python3 python3-venv
-git clone <repository-url> kitchen-hub
-cd kitchen-hub
+git clone <repository-url> family-hub
+cd family-hub
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -110,7 +110,7 @@ Open http://localhost:5000 in Chrome for kiosk testing.
 ## Service management (systemd)
 
 ```bash
-sudo systemctl status kitchen-hub@<user>.service
-sudo systemctl status kitchen-hub-kiosk@<user>.service
-sudo journalctl -u kitchen-hub@<user>.service -f
+sudo systemctl status family-hub@<user>.service
+sudo systemctl status family-hub-kiosk@<user>.service
+sudo journalctl -u family-hub@<user>.service -f
 ```

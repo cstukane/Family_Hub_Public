@@ -5,16 +5,11 @@ apps:
   label: Home
   target: week_calendar
 - action: open_tab
-  icon: spotify.svg
-  id: spotify
-  label: Spotify
-  url: https://open.spotify.com/
-- action: open_iframe
   icon: youtube.svg
   id: youtube
   label: YouTube
   url: https://www.youtube.com/
-- action: open_tab
+- action: open_iframe
   icon: sports.svg
   id: espn
   label: ESPN
@@ -41,13 +36,6 @@ apps:
   url: https://pluto.tv/
 local_apps: []
 extra_apps: []
-casting:
-  auto_discover: false
-  default_volume: 50
-  devices: []
-  discovery_enabled: false
-  discovery_interval: 300
-  enabled: false
 features:
   auth: false
   kiosk: true
@@ -77,7 +65,7 @@ commute:
   google_api_key: ''
   mapbox_token: ''
 music:
-  enabled: true
+  enabled: false
   local_path: ./instance/music
   providers:
     radio_browser:
@@ -95,7 +83,7 @@ music:
   spotify:
     client_id: ''
     client_secret: ''
-    redirect_uri: http://127.0.0.1:5000/integrations/spotify/callback
+    redirect_uri: ''
     enable_library_sync: false
     sync_cooldown_minutes: 360
     sync_saved_tracks: false
@@ -110,11 +98,9 @@ music:
   sync_enabled: false
   volume: 70
 media:
-  enabled: true
-  launcher_endpoint: http://127.0.0.1:7666/v1/open_media
+  enabled: false
+  launcher_endpoint: ''
   allowed_domains:
-  - localhost
-  - 127.0.0.1
   - youtube.com
   - youtu.be
   - twitch.tv
@@ -133,11 +119,6 @@ media:
   - therokuchannel.roku.com
 photos:
   enabled: false
-  google_photos:
-    client_id: ''
-    client_secret: ''
-    enabled: false
-    refresh_token: ''
   local_path: ./instance/photos
   slideshow_interval: 5
   sync_enabled: false
@@ -180,33 +161,3 @@ ui:
   theme: auto
 external_api_limits:
   spotify: 12 per minute
-webhooks: []
-chores:
-  enabled: false
-  default_assignee: family
-  reminder_hours_before: 24
-  recurring_enabled: true
-  default_priority: normal
-  family_members:
-  - parent
-  - child1
-  - child2
-iot:
-  enabled: false
-  discovery_enabled: false
-  discovery_interval: 300
-  default_timeout: 10
-  alexa_enabled: false
-  google_home_enabled: false
-  supported_device_types:
-  - alexa
-  - google_home
-  - google_cast
-services:
-  weather_alerts: false
-  webhooks: false
-  update_checks: false
-plugin_config:
-  enabled: false
-  auto_update: false
-  allow_unsafe: false

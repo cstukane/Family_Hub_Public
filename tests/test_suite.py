@@ -1,5 +1,5 @@
 """
-Test suite for Kitchen Hub application.
+Test suite for Family Hub application.
 
 This test suite covers:
 - Configuration loading and validation

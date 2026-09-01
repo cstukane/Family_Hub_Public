@@ -30,7 +30,6 @@ Health check: `curl http://localhost:5000/health`
 
 ### Entry Points
 - `app.py` — Flask app factory, Jinja2 filters, SocketIO/Limiter/Talisman setup
-- `hub_app.py` — Alternative entry point
 - `hub/` — Core application package
 
 ### Request Lifecycle / Data Flow
@@ -48,9 +47,8 @@ APScheduler (hub/scheduler.py)
 | Directory | Purpose |
 |-----------|---------|
 | `hub/adapters/` | Swappable provider integrations (calendar_google, calendar_ics, weather_openmeteo, sports_espn, sports_thesportsdb, etc.) |
-| `hub/services/` | Business logic per domain (calendar, weather, sports, music, photos, timers, notes, shopping, chores, iot, etc.) |
-| `hub/routes/` | Flask blueprints — `api.py` (main REST/HTMX), `api_media_admin.py`, `api_weather.py`, `api_admin.py`, `api_webhooks.py`, `api_plugins.py`, `main.py` |
-| `hub/integrations/` | OAuth flows (Spotify PKCE) |
+| `hub/services/` | Business logic per domain (calendar, weather, sports, timers, notes, shopping, commute, reference/conversion, etc.) |
+| `hub/routes/` | Flask blueprints — `api.py` (main REST/HTMX), `api_weather.py`, `api_admin.py`, `api_webhooks.py`, `api_plugins.py`, `main.py` |
 | `hub/utils/` | Auth helpers, decorators, HTTP utils, logging config |
 | `hub/models.py` | Shared dataclasses (CalendarEvent, Timer, Weather, etc.) |
 | `hub/config.py` | Pydantic v2 config schema — validates `config.yaml` on startup |
@@ -67,8 +65,8 @@ APScheduler (hub/scheduler.py)
 All runtime customization is in `config.yaml` (validated by `hub/config.py` using Pydantic v2). Secrets go in `.env` (or `instance/secrets.env` for production). The config covers:
 - `layout` / `ui` — dashboard views, theme, sidebar widgets
 - `providers` — which adapter to use per domain (e.g. `calendar.kind: google|ics`)
-- `features` — feature flags (voice, kiosk, auth, plugins, sports_ticker)
-- `apps` / `local_apps` — media launcher shortcuts
+- `features` — feature flags (kiosk, auth, sports_ticker)
+- `apps` — public media launcher shortcuts
 - `security` — rate limits, CSP, SSL, session timeout
 
 ### Adapter Pattern
@@ -79,9 +77,7 @@ Socket.IO (`hub/sockets.py`) drives timer countdowns, "Up Next" calendar updates
 
 ### Key Large Files
 - `hub/routes/api.py` (51 KB) — primary REST + HTMX endpoints
-- `hub/routes/api_media_admin.py` (89 KB) — media/launcher API with JWT auth
 - `hub/services/sports_ticker_service.py` (52 KB) — live sports tracking logic
-- `hub/services/music.py` (32 KB) — Spotify + local library
 - `templates/base.html` (85 KB) — full dashboard layout
 
 ### Testing

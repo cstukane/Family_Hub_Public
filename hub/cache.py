@@ -1,4 +1,4 @@
-"""Cache utilities for the Kitchen Hub application."""
+"""Cache utilities for the Family Hub application."""
 
 import json
 import threading

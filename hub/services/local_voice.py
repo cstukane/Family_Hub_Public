@@ -1,5 +1,5 @@
 """
-Local voice processing module for Kitchen Hub.
+Local voice processing module for Family Hub.
 This module handles wake word detection and local speech-to-text processing
 to maintain privacy by keeping voice processing on the device.
 """

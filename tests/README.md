@@ -1,6 +1,6 @@
-# Kitchen Hub Test Suite
+# Family Hub Test Suite
 
-This test suite covers the complete Kitchen Hub application functionality with 40 comprehensive tests that validate:
+This test suite covers the complete Family Hub application functionality with 40 comprehensive tests that validate:
 
 ## Test Coverage
 
@@ -89,4 +89,4 @@ The test suite uses:
 - **Integration**: End-to-end functionality testing
 - **Edge Cases**: Error handling, empty states, invalid data
 
-All tests pass, confirming the Kitchen Hub application is functioning correctly according to the original requirements and architecture.
+All tests pass, confirming the Family Hub application is functioning correctly according to the original requirements and architecture.

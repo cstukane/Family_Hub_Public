@@ -1,4 +1,4 @@
-"""Voice command processing service for the Kitchen Hub."""
+"""Voice command processing service for the Family Hub."""
 
 import re
 from typing import Any, Dict, List

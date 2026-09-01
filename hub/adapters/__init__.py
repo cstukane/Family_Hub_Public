@@ -1,4 +1,4 @@
-"""Adapters package for Kitchen Hub."""
+"""Adapters package for Family Hub."""
 
 from .alexa_adapter import AlexaAdapter, discover_alexa_devices
 from .calendar_google import add_google_event, fetch_google_events

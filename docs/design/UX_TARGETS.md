@@ -6,7 +6,7 @@ The export is illustrative. The current app behavior remains the source of truth
 
 ## What To Adopt
 
-- The darker, quieter kiosk visual language from the two `Kitchen Hub Redesign` artboards
+- The darker, quieter kiosk visual language from the two `Family Hub Redesign` artboards
 - A tighter, more intentional shell with clear separation between main canvas, right rail, app dock, and sports strip
 - A calmer sidebar hierarchy:
   - large clock/date first

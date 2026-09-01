@@ -1,5 +1,5 @@
 """
-Test script for IP whitelisting functionality in Kitchen Hub
+Test script for IP whitelisting functionality in Family Hub
 """
 
 import json

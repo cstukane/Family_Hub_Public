@@ -221,7 +221,7 @@ class IoTConfig(BaseModel):
 class MusicConfig(BaseModel):
     """Configuration for music functionality."""
 
-    enabled: bool = True
+    enabled: bool = False
     local_path: str = "./instance/music"  # Path to local music files
     volume: int = 70  # Default volume (0-100)
     sync_enabled: bool = False  # Whether to sync from external services
@@ -234,8 +234,8 @@ class MusicConfig(BaseModel):
 class MediaConfig(BaseModel):
     """Configuration for media launcher functionality."""
 
-    enabled: bool = True
-    launcher_endpoint: str = "http://127.0.0.1:7666/v1/open_media"
+    enabled: bool = False
+    launcher_endpoint: str = ""
     allowed_domains: List[str] = Field(
         default_factory=lambda: [
             "youtube.com",

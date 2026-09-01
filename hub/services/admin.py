@@ -1,4 +1,4 @@
-"""Admin service for the Kitchen Hub application."""
+"""Admin service for the Family Hub application."""
 
 import os
 import shutil
@@ -138,7 +138,7 @@ def get_system_info() -> Dict[str, Any]:
         return {
             "application": {
                 "version": __version__,
-                "name": "Kitchen Hub",
+                "name": "Family Hub",
                 "environment": os.environ.get("FLASK_ENV", "production"),
             },
             "system": {

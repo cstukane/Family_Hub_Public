@@ -1,14 +1,14 @@
 [Unit]
-Description=Kitchen Hub Flask App (Backend for nginx reverse proxy)
+Description=Family Hub Flask App (Backend for nginx reverse proxy)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 User=%i
-WorkingDirectory=/opt/kitchen-hub
+WorkingDirectory=/opt/family-hub
 Environment="FLASK_ENV=production"
-EnvironmentFile=/opt/kitchen-hub/instance/.env
-Environment="FAMILY_HUB_CONFIG=/opt/kitchen-hub/instance/config.yaml"
+EnvironmentFile=/opt/family-hub/instance/.env
+Environment="FAMILY_HUB_CONFIG=/opt/family-hub/instance/config.yaml"
 ExecStart=/usr/bin/python3 -m gunicorn -w 2 -b 127.0.0.1:5000 "app:create_app()"  # Internal port, only accessible locally
 Restart=always
 RestartSec=5

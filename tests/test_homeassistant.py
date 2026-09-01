@@ -1,4 +1,4 @@
-"""Tests for the Home Assistant adapter."""
+"""Tests for the Home Assistant adapter (dormant in Public V1)."""
 
 from unittest.mock import MagicMock, Mock, patch
 

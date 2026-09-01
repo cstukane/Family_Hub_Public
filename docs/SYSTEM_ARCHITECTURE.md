@@ -1,15 +1,15 @@
 # SYSTEM ARCHITECTURE — Family Hub
 
-See `KITCHEN_HUB_PLAN.md` for the canonical tree. This document focuses on components and data flow.
+This document focuses on components and data flow.
 
 ## Components
 - **Flask App**: routes for views and HTMX partials
-- **Services Layer**: calendar, weather, notes, shopping, media, timers, sports ticker, commute, music
+- **Services Layer**: calendar, weather, notes, shopping, timers, sports ticker, commute, reference/conversion
 - **Adapters**: swappable provider modules (ICS/Google, Open-Meteo/NWS, TheSportsDB/ESPN, etc.)
 - **SQLite**: persistence for local data + TTL caches
 - **APScheduler**: background refresh jobs (calendar 15 min, weather 15 min, sports adaptive 1–30 min, cache cleanup 24h)
 - **Socket.IO**: real-time timer countdowns, "Up Next" pushes, sports score updates
-- **Kiosk Shell**: Chromium fullscreen via systemd
+- **Kiosk Shell**: Chromium fullscreen via systemd or manual app mode
 
 ## Data Flow (example: Weather)
 1. Scheduler triggers `weather.refresh()` every 15 minutes.

@@ -1,6 +1,6 @@
 @echo off
 REM Development startup script for Family Hub
-REM This script starts the hub app, media launcher, and the UI in one go
+REM This script starts the Family Hub UI in one go
 
 echo Starting Family Hub development environment...
 echo.
@@ -40,29 +40,10 @@ if errorlevel 1 (
 )
 
 echo.
-echo Checking if ports 5000 and 7666 are available...
-netstat -an | findstr :5000 >nul
-if not errorlevel 1 (
-    echo Warning: Port 5000 is in use. Hub app may fail to start.
-)
-netstat -an | findstr :7666 >nul
-if not errorlevel 1 (
-    echo Warning: Port 7666 is in use. Media launcher may fail to start.
-)
-echo.
+echo Starting Family Hub on port 5000...
+start "Family Hub" cmd /c "python app.py"
 
-REM Start the hub app in a separate window
-echo Starting hub app on port 5000...
-start "Family Hub App" cmd /c "python hub_app.py"
-
-REM Give the hub app a moment to start
-timeout /t 3 /nobreak >nul
-
-REM Start the media launcher in a separate window
-echo Starting media launcher on port 7666...
-start "Media Launcher" cmd /c "python media_launcher.py"
-
-REM Give the media launcher a moment to start
+REM Give the app a moment to start
 timeout /t 3 /nobreak >nul
 
 REM Launch the UI in Chrome
@@ -71,8 +52,5 @@ call scripts\start_chrome_win.bat
 
 echo.
 echo Development environment started!
-echo To test: click YouTube icon in the UI
-echo To close media: use Controller button or press Ctrl+Shift+X in the main UI
-echo.
 echo Press any key to exit and stop all services...
 pause >nul

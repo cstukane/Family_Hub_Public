@@ -81,7 +81,7 @@ def test_get_system_info_with_mocked_auth(client):
 
         with patch("hub.services.get_system_info") as mock_get_sys_info:
             mock_get_sys_info.return_value = {
-                "application": {"name": "Kitchen Hub", "version": "0.1.0"},
+                "application": {"name": "Family Hub", "version": "0.1.0"},
                 "system": {"platform": "test", "cpu_percent": 10.0},
             }
 

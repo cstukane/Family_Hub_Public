@@ -1,4 +1,4 @@
-"""Backup and restore service for the Kitchen Hub application."""
+"""Backup and restore service for the Family Hub application."""
 
 import os
 import shutil

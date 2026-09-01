@@ -3,11 +3,11 @@ requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "kitchen_hub"
+name = "family_hub"
 version = "0.1.0"
-description = "A self-contained Kitchen Hub dashboard application"
+description = "A self-contained family dashboard application"
 readme = "README.md"
-authors = [{name = "Kitchen Hub Team"}]
+authors = [{name = "Family Hub Contributors"}]
 license = "MIT"
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -55,7 +55,7 @@ e2e = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/kitchen-hub/kitchen-hub"
+Homepage = "https://github.com/family-hub/public"
 
 [tool.setuptools.packages.find]
 where = ["."]

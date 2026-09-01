@@ -1,4 +1,4 @@
-"""Update service for the Kitchen Hub application."""
+"""Update service for the Family Hub application."""
 
 import json
 import logging

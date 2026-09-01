@@ -138,7 +138,7 @@ def weather_code_to_description(code):
     return weather_descriptions.get(int(code), "Unknown")
 
 
-def convert_to_timezone(dt, tz_name="America/New_York"):
+def convert_to_timezone(dt, tz_name="UTC"):
     """Convert datetime to specified timezone."""
     parsed = _ensure_datetime(dt)
     if parsed is None:
@@ -236,8 +236,6 @@ SECURITY_HEADERS = {
             "https://*.open-meteo.com",
             "https://www.thesportsdb.com",
             "wss:",
-            "http://127.0.0.1:*",
-            "http://localhost:*",
             "https://cdn.jsdelivr.net",
             "https://cdnjs.cloudflare.com",
             "https://api.mapbox.com",
@@ -245,8 +243,6 @@ SECURITY_HEADERS = {
         ],
         "frame-src": [
             "'self'",
-            "http://127.0.0.1:*",
-            "http://localhost:*",
             "https://www.youtube.com",
             "https://www.youtube-nocookie.com",
             "https://pluto.tv",
@@ -341,7 +337,7 @@ def create_app(config_path: str | None = None) -> Flask:
     config = load_config(config_path)
     app.config["CONFIG"] = config
     app.config["CONFIG_PATH"] = config_path
-    app.config["DATABASE"] = os.path.join(app.instance_path, "kitchen_hub.db")
+    app.config["DATABASE"] = os.path.join(app.instance_path, "family_hub.db")
 
     # Configure secret key for sessions
     secret_key = os.environ.get("SECRET_KEY")

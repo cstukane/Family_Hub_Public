@@ -1,4 +1,4 @@
-"""Cooking Mode Service for Kitchen Hub."""
+"""Cooking Mode Service for Family Hub."""
 
 from dataclasses import dataclass
 from datetime import datetime

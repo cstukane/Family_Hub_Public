@@ -1,6 +1,6 @@
 @echo off
-REM Kitchen Hub Application Launcher - Enhanced
-REM This script ensures the virtual environment is properly used and launches the Kitchen Hub Flask application
+REM Family Hub Application Launcher
+REM This script ensures the virtual environment is properly used and launches the Family Hub Flask application
 REM 
 REM Prerequisites:
 REM - Python 3.11+ installed
@@ -11,7 +11,7 @@ setlocal enabledelayedexpansion
 
 echo.
 echo ================================================
-echo    Kitchen Hub Application Launcher - Enhanced
+echo    Family Hub Application Launcher
 echo ================================================
 echo.
 
@@ -147,67 +147,19 @@ echo   FLASK_APP=%FLASK_APP%
 echo   FLASK_ENV=%FLASK_ENV%
 echo.
 
-REM Start media launcher service if it is not already running
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr /R /C:":7666 .*LISTENING"') do set MEDIA_LAUNCHER_PID=%%a
-if defined MEDIA_LAUNCHER_PID (
-    echo Media launcher already running (PID !MEDIA_LAUNCHER_PID!)
-) else (
-    echo Starting media launcher service on port 7666...
-    start "Media Launcher" /D "%~dp0" "!PYTHON_PATH!" media_launcher.py
-)
-echo.
-
-REM Check for SSL configuration in config.yaml
-for /f "usebackq tokens=2 delims=: " %%a in (`findstr /C:"ssl_enabled: true" config.yaml 2^>nul`) do set SSL_ENABLED=%%a
-if /i "!SSL_ENABLED!"=="true" (
-    echo SSL is enabled in config.yaml
-    for /f "usebackq tokens=2* delims=:" %%a in (`findstr /C:"ssl_cert_path:" config.yaml`) do set CERT_PATH=%%b
-    for /f "usebackq tokens=2* delims=:" %%a in (`findstr /C:"ssl_key_path:" config.yaml`) do set KEY_PATH=%%b
-    if "!CERT_PATH:~0,1!"==" " set CERT_PATH=!CERT_PATH:~1!
-    if "!KEY_PATH:~0,1!"==" " set KEY_PATH=!KEY_PATH:~1!
-    
-    REM Remove quotes if present
-    set CERT_PATH=!CERT_PATH:"=!
-    set KEY_PATH=!KEY_PATH:"=!
-    
-    if exist "!CERT_PATH!" if exist "!KEY_PATH!" (
-        echo SSL certificate and key found, will start with HTTPS
-        set USE_SSL=1
-    ) else (
-        echo WARNING: SSL is enabled in config but certificate/key files not found
-        echo Certificate path: !CERT_PATH!
-        echo Key path: !KEY_PATH!
-        echo Starting in HTTP mode instead
-        set USE_SSL=0
-    )
-) else (
-    echo SSL is not enabled in config.yaml, starting in HTTP mode
-    set USE_SSL=0
-)
-
-echo.
-
 echo ================================================
-echo Starting Kitchen Hub Application...
+echo Starting Family Hub Application...
 echo ================================================
 echo.
 echo Access the application at:
-if "!USE_SSL!"=="1" (
-    echo   HTTPS: https://localhost:5000
-) else (
-    echo   HTTP: http://localhost:5000
-)
+echo   HTTP: http://localhost:5000
 echo.
 echo Press Ctrl+C to stop the application
 echo ================================================
 echo.
 
 REM Start the Flask application using the specific Python path
-if "!USE_SSL!"=="1" (
-    "!PYTHON_PATH!" run_socketio.py --host=0.0.0.0 --port=5000 --cert="!CERT_PATH!" --key="!KEY_PATH!"
-) else (
-    "!PYTHON_PATH!" run_socketio.py --host=0.0.0.0 --port=5000
-)
+"!PYTHON_PATH!" run_socketio.py --host=0.0.0.0 --port=5000
 
 REM If the application stopped due to an error, show it
 if errorlevel 1 (

@@ -136,7 +136,7 @@ def test_calendar_week_partial_marks_short_events_for_readable_rendering(client,
 def test_week_time_grid_collapses_exact_duplicate_timed_events():
     """Exact duplicate timed events should collapse before lane layout."""
 
-    local_tz = ZoneInfo("America/New_York")
+    local_tz = ZoneInfo("UTC")
     start_local = datetime(2026, 6, 19, 8, 0, tzinfo=local_tz)
     end_local = datetime(2026, 6, 19, 9, 0, tzinfo=local_tz)
     date_cells = [datetime(2026, 6, 14).date() + timedelta(days=i) for i in range(7)]
@@ -162,7 +162,7 @@ def test_week_time_grid_collapses_exact_duplicate_timed_events():
 def test_week_time_grid_assigns_distinct_lanes_to_overlapping_events():
     """Overlapping timed events should split horizontally instead of fully covering one another."""
 
-    local_tz = ZoneInfo("America/New_York")
+    local_tz = ZoneInfo("UTC")
     date_cells = [datetime(2026, 6, 14).date() + timedelta(days=i) for i in range(7)]
     target_day = datetime(2026, 6, 19).date()
     event_a = CalendarEvent(
@@ -200,7 +200,7 @@ def test_week_time_grid_assigns_distinct_lanes_to_overlapping_events():
 def test_week_time_grid_keeps_back_to_back_hour_events_from_overlapping():
     """Adjacent one-hour events should not visually spill into each other."""
 
-    local_tz = ZoneInfo("America/New_York")
+    local_tz = ZoneInfo("UTC")
     date_cells = [datetime(2026, 6, 14).date() + timedelta(days=i) for i in range(7)]
     target_day = datetime(2026, 6, 19).date()
     first_event = CalendarEvent(
@@ -238,7 +238,7 @@ def test_week_time_grid_keeps_back_to_back_hour_events_from_overlapping():
 def test_week_time_grid_places_single_day_all_day_event_on_correct_day():
     """Exclusive-end all-day events should appear on their intended local day."""
 
-    local_tz = ZoneInfo("America/New_York")
+    local_tz = ZoneInfo("UTC")
     date_cells = [datetime(2026, 6, 14).date() + timedelta(days=i) for i in range(7)]
     ooo_event = CalendarEvent(
         id=1,
@@ -294,7 +294,7 @@ def test_week_time_grid_places_google_style_all_day_event_on_correct_day():
 def test_week_time_grid_spans_multi_day_all_day_events_and_stacks_conflicts():
     """Multi-day all-day events should span columns and conflicting bars should stack."""
 
-    local_tz = ZoneInfo("America/New_York")
+    local_tz = ZoneInfo("UTC")
     date_cells = [datetime(2026, 6, 14).date() + timedelta(days=i) for i in range(7)]
     first = CalendarEvent(
         id=1,
@@ -333,7 +333,7 @@ def test_week_time_grid_spans_multi_day_all_day_events_and_stacks_conflicts():
 def test_group_events_by_date_for_template_collapses_exact_duplicates():
     """Month view grouping should collapse exact duplicates but keep distinct events."""
 
-    local_tz = ZoneInfo("America/New_York")
+    local_tz = ZoneInfo("UTC")
     target_date = datetime(2026, 6, 19).date()
     duplicate_a = CalendarEvent(
         id=1,
@@ -365,7 +365,7 @@ def test_group_events_by_date_for_template_collapses_exact_duplicates():
 def test_calendar_week_partial_renders_overlap_lanes_and_spanning_all_day_bar(client, monkeypatch):
     """Rendered week view should expose overlap lane styles and all-day spanning metadata."""
 
-    local_tz = ZoneInfo("America/New_York")
+    local_tz = ZoneInfo("UTC")
     events = [
         CalendarEvent(
             id=1,
@@ -412,7 +412,7 @@ def test_calendar_week_partial_renders_overlap_lanes_and_spanning_all_day_bar(cl
 def test_calendar_week_partial_renders_one_time_row_per_hour(client, monkeypatch):
     """Week view should render one body row per displayed hour, not one per axis label."""
 
-    local_tz = ZoneInfo("America/New_York")
+    local_tz = ZoneInfo("UTC")
     events = [
         CalendarEvent(
             id=1,
@@ -513,7 +513,7 @@ def test_get_root(client):
     """Test getting the root page."""
     response = client.get("/")
     assert response.status_code == HTTP_OK
-    assert b"Kitchen Hub" in response.data
+    assert b"Family Hub" in response.data
 
 
 def test_ingredients_to_shopping(client):

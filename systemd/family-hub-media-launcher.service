@@ -5,10 +5,10 @@ After=network.target
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/opt/kitchen-hub
-Environment=PATH=/opt/kitchen-hub/.venv/bin
+WorkingDirectory=/opt/family-hub
+Environment=PATH=/opt/family-hub/.venv/bin
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/opt/kitchen-hub/.venv/bin/python media_launcher.py
+ExecStart=/opt/family-hub/.venv/bin/python media_launcher.py
 Restart=always
 RestartSec=5
 

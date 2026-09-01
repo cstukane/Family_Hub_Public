@@ -1,799 +1,950 @@
-# IMPLEMENTATION_PHASES — Family Hub
+# Family Hub — Public Edition Implementation Phases
 
-*Generated 2026-07-02 from the current repo review, the 2026-07-02 product review, prior product-direction docs, and the current repo roadmap/config state.*
-
-Family Hub is a local-first, always-on kitchen TV dashboard and homelab launcher. Its product loop is intentionally small:
-
-1. Walk into the kitchen.
-2. In a few seconds, know what is next today, weather, commute status, and relevant sports/scores.
-3. Occasionally touch the screen to add a shopping item, set a timer, control music, or open a sibling/homelab app.
-
-This file is the implementation roadmap. It supersedes expansionist roadmap items that would turn Family Hub into Command Center, a smart-home control surface, a plugin platform, or a full family operating system.
-
-## Source Anchors
-
-Use these files as the primary source of truth before implementing phases:
-
-- `README.md` — current product framing and feature summary.
-- `PRODUCT_DIRECTION.md` — product identity, convergence guidance, and attic warnings.
-- `docs/PRODUCT_REVIEW.md` — Fable product/architecture review and roadmap sharpening.
-- `docs/design/STYLE.md` — dark, calm, TV-first visual contract.
-- `docs/design/UX_TARGETS.md` — how the Claude Design export should influence real UI.
-- `docs/ATTIC_REACHABILITY_AUDIT.md` — attic subsystem reachability and deletion/freeze notes.
-- `docs/API_CONTRACTS.md` — route and endpoint reference.
-- `docs/DEPLOYMENT.md` — systemd/kiosk deployment guidance.
-- `config.example.yaml` — safe tracked defaults; ignored `instance/config.yaml` is the live deployment config.
-- `.env.example`, ignored `instance/.env`, and deployment scripts — the documented secrets model.
-- `app.py`, `hub/config.py`, `hub/scheduler.py`, `hub/routes/main.py`, `hub/routes/api.py`.
-- `templates/base.html`, `templates/partials/*`, `static/css/base.css`, `static/js/fragments/*`.
-- Core service/cache files for calendar, weather, commute, sports ticker, shopping, timers, media launcher, and Spotify/miniplayer.
-
-## Agent Operating Rules
-
-- Before implementing a phase, inspect the current repo state. Do not assume this file is perfectly current.
-- Keep Family Hub appliance-shaped. Prefer convergence, trust, privacy, and reliability over feature growth.
-- Do not add new panels, providers, smart-home controls, voice, profiles, plugins, auth, or Command Center-style workflows unless a phase explicitly calls for it.
-- If inspection suggests a phase should be narrowed, delayed, split, merged, renamed, or materially changed, stop and explain the proposed change before editing.
-- Do not perform destructive git history rewrites, secret scrubs, or force pushes without explicit owner approval.
-- Do not repeat or print sensitive real config values in logs, docs, commits, examples, tests, or review notes.
-- Prefer tests around behavior and rendered state over broad refactors.
-- Use the existing Flask + Jinja + HTMX + Socket.IO + APScheduler + SQLite shape. Do not introduce a frontend framework.
-- For normal validation, run `pytest --ignore=tests/e2e`. Use e2e/kiosk/manual checks only when the phase touches layout, browser behavior, or deployment.
+**Status:** Planned  
+**Target:** Friends-and-family beta / public GitHub repository  
+**Product model:** Self-hosted household appliance, not a hosted service  
+**Primary host:** Windows 10/11  
+**Secondary host:** Linux / Raspberry Pi  
+**Primary clients:** Large-screen desktop, touchscreen, tablet  
+**Phone support:** Best-effort only; not a design target
 
 ---
 
-## Phase 1 - Product Identity and Redesign Baseline
+## 1. Purpose
 
-**Status:** Completed / Preserve
+This document defines the work required to turn the existing private Family Hub application into a separate, household-agnostic **public edition** that can be installed and used by friends without requiring them to understand Python, Git, YAML, `.env` files, or the private owner's homelab.
 
-### Goal
+The public edition is **not** a commercial product, SaaS service, or general family-management platform. It is a hobby project shared as-is.
 
-Preserve the work already done to make Family Hub a coherent appliance: honest README, deleted attic subsystems, committed TV-first redesign, and a clear product direction.
+The intended experience is:
 
-### Deliverables
+1. Download Family Hub.
+2. Install it on a Windows PC, or deploy it on Linux / Raspberry Pi using documented instructions.
+3. Follow a first-run setup wizard.
+4. Connect Google Calendar or configure ICS.
+5. Choose optional features such as weather, sports, music, commute, and the public app launcher.
+6. Use Family Hub locally on the host device or from a tablet/touchscreen on the same trusted home network.
+7. Revisit Settings later to change any wizard choice.
 
-- Keep the README framing centered on the kitchen TV dashboard and homelab launcher.
-- Preserve the committed dashboard shape:
-  - main calendar canvas,
-  - bottom Up Next / Shopping / Commute-or-Timer tiles,
-  - right rail with clock, quick tools, weather, and miniplayer,
-  - bottom app dock and sports ticker.
-- Preserve the June cleanup stance:
-  - news, edge, self-heal, and metrics/Prometheus remain removed.
-  - `/health` remains the lightweight status endpoint.
-  - systemd restart + cache-on-disk remain the resilience strategy.
-- Protect the current shopping tile improvements:
-  - tile is tappable,
-  - empty state is visible,
-  - `+ Add item` affordance remains clear.
-- Protect miniplayer disconnected/no-track polish from regressions.
-
-### Non-Goals
-
-- Do not rebuild the UI from the Claude Design export.
-- Do not introduce React or another SPA framework.
-- Do not add new dashboard cards.
-- Do not resurrect removed subsystems.
-- Do not treat this completed phase as an excuse to freeze all future UI polish.
-
-### Acceptance Criteria
-
-- README and `PRODUCT_DIRECTION.md` still describe the same product.
-- Home dashboard renders the core one-screen experience.
-- Shopping tile empty state remains actionable.
-- Removed systems are not reintroduced.
-- Existing tests still pass with `pytest --ignore=tests/e2e`.
+No Family Hub cloud account exists. No household data is hosted by the project owner.
 
 ---
 
-## Phase 2 - Privacy and Config Hygiene
+## 2. Repo Strategy
 
-**Status:** Completed 2026-08-12
+The public edition must live in a **new repository with fresh history**.
 
-### Goal
+### Private repo
 
-Remove private, deploy-specific, and location-specific values from tracked canonical files, and make it clear where real local configuration belongs.
+The existing private `Family_Hub` repository remains untouched as the owner's personal version. It keeps:
 
-This phase comes first because privacy/config leaks get worse over time, especially if the repo is ever made public, cloned to additional machines, mirrored, or shared with coding agents.
+- private history,
+- household-specific configuration,
+- personal launcher entries,
+- private deployment assumptions,
+- any local-only features that are useful to the owner.
 
-### Deliverables
+### Public repo
 
-- Create or update `config.example.yaml` with placeholder-safe values for:
-  - home/work addresses,
-  - LAN IPs,
-  - Tailscale hostnames,
-  - SSL certificate paths,
-  - map/Spotify/Google credentials,
-  - webhook URLs/secrets,
-  - local app ports and labels where appropriate.
-- Move real deploy-specific config out of tracked source:
-  - preferred locations: `.env`, `instance/secrets.env`, `instance/config.yaml`, or a documented local override path.
-  - update `.gitignore` so real config files are not re-added.
-- Scrub README examples so they do not contain real addresses, hostnames, local IPs, or private deployment details.
-- Update `docs/DEPLOYMENT.md` and `.env.example` so a junior dev knows how to configure a local copy without copying private values.
-- Ensure app boot still works from a safe example configuration or clearly documented local config path.
-- Add or update tests for public config exposure:
-  - public/browser config should not expose raw home/work street addresses.
-  - public/browser config should not expose secret tokens.
-  - only intentionally public map/client values may be exposed, and only if documented.
-- Add an explicit note: git history rewrite is a separate manual decision, not part of this phase unless the owner approves it.
+Create a new public repository named **Family Hub** from a sanitized snapshot of current working code.
 
-### Non-Goals
+Requirements:
 
-- Do not rewrite git history without explicit approval.
-- Do not remove commute functionality.
-- Do not break local kiosk deployment.
-- Do not invent a full multi-environment config framework.
-- Do not add auth as a privacy substitute.
-
-### Acceptance Criteria
-
-- No tracked README/config/example file contains real private location or network details.
-- `config.example.yaml` is safe to commit and share.
-- Real local config is documented and ignored by git.
-- The app can run with safe defaults or clear local setup instructions.
-- Tests or targeted checks confirm public config does not leak raw private fields.
-- If history rewrite is needed, it is documented as a separate owner-approved operation.
+- Do not preserve the private repository's Git history.
+- Do not include private household config, local addresses, private hostnames, personal ports, credentials, tokens, screenshots containing private data, or other deploy-specific information.
+- The two repos remain independent permanently.
+- Improvements may be manually copied between repos when useful, but there is no automatic synchronization requirement.
+- Internet-radio work from the public edition should later be ported back to the private edition manually.
+- Use an MIT license unless changed explicitly later.
+- Do not optimize the repository for discovery or promotion. It may be public, but no effort is required to advertise it, publish packages broadly, or turn it into a community project.
 
 ---
 
-## Phase 3 - Core Tile Trust: Freshness, Staleness, and Failure States
+## 3. Product Contract
 
-**Status:** Planned / Start After Phase 2
+### Core features
 
-### Goal
+These are part of the basic Family Hub experience and are not user-disableable in V1 unless implementation requires a safety fallback:
 
-Make the wall trustworthy. Every core resting tile should quietly communicate whether its data is fresh, stale, failed, or needs reconnect.
+- Calendar
+- Clock / date
+- Shopping list
+- Notes
+- Timers
+- Kitchen reference / conversion tools
 
-The target is not a noisy monitoring dashboard. The target is quiet honesty.
+Calendar remains the primary screen anchor and must not disappear.
 
-### Deliverables
+### Optional features
 
-Apply one consistent freshness/failure pattern to these surfaces:
+Users may enable or disable:
 
-- Weather tile and weather modal.
-- Calendar week grid.
-- Up Next tile.
-- Commute tile, preserving existing update/stale behavior.
-- Sports ticker.
-- Center zone or any fallback/preview module already showing last-updated state.
+- Weather
+- Sports
+- Internet radio / music
+- Commute
+- Public media/app launcher
 
-Implementation should include:
+Disabled modules must not leave blank holes. The dashboard must reflow into sensible predefined layouts.
 
-- reusable helper/context shape for:
-  - `last_updated`,
-  - freshness age,
-  - stale threshold,
-  - error state,
-  - auth/reconnect state where relevant.
-- visual treatment in the design language from `docs/design/STYLE.md`:
-  - subtle updated badge,
-  - amber stale state,
-  - quiet failed state,
-  - non-alarming reconnect action where useful.
-- Google Calendar token-expiry UX:
-  - clear message such as calendar cannot sync,
-  - tap/click path to reconnect when feasible,
-  - no silent blank calendar.
-- tests for rendered states where possible.
-- one manual browser smoke check at 1920x1080 or the nearest available viewport.
+### Explicitly not included in public V1
 
-### Non-Goals
-
-- Do not build a full metrics dashboard.
-- Do not add Prometheus, `/metrics`, or a new observability stack.
-- Do not add a new status page unless explicitly needed.
-- Do not spam toasts for normal stale states.
-- Do not create a generalized failure-state framework larger than the app needs.
-
-### Acceptance Criteria
-
-- Weather, calendar/week, Up Next, commute, sports ticker, and center/fallback surfaces show an honest freshness/failure state.
-- If provider data is stale, the UI says so without breaking the glanceable layout.
-- If Google Calendar auth fails or expires, the UI shows an understandable reconnect/sync-failed state.
-- Existing successful data paths still render normally.
-- Tests cover at least fresh, stale, provider-error, and auth-error paths for core surfaces where practical.
-- `pytest --ignore=tests/e2e` passes.
+- Private homelab launcher entries
+- Custom localhost app-launcher system
+- Spotify integration
+- Apple Music integration
+- YouTube Music integration
+- Pandora integration
+- iHeartRadio integration
+- TuneIn integration
+- Local music folders
+- Drag-and-drop dashboard construction
+- User accounts
+- Multi-household tenancy
+- Cloud hosting by the project owner
+- Offline synchronization between devices
+- Automatic software updates
+- Backup/restore UI
+- Phone-first layout
+- Exhaustive device/platform certification
+- Home Assistant / Jellyfin / custom homelab integration work
+- Outlook / Microsoft Calendar
+- Automated HTTPS/Tailscale setup
 
 ---
 
-## Phase 4 - Runtime Attic Shutdown
+## 4. Architecture Principles
 
-**Status:** Completed 2026-08-12 (runtime gating; attic deletion remains deferred)
+Preserve the existing application shape unless a phase specifically requires a narrow change:
 
-### Goal
+- Flask
+- Jinja templates
+- HTMX
+- Socket.IO
+- APScheduler
+- SQLite
+- Provider/adaptor layers
+- Server-side configuration and credentials
+- Existing local data/cache model
 
-Make "frozen" mean off at runtime, not merely labeled as frozen in docs.
+Do not replatform to React, Electron, or another SPA framework.
 
-Family Hub can carry some dormant code for now, but the appliance should not run background jobs, network discovery, webhook checks, plugin loading, or smart-home scans for features that are not part of the active dashboard.
+The public edition should behave as a **self-hosted household server with a touch-friendly web interface**.
 
-### Deliverables
-
-- Review `config.example.yaml`, `hub/config.py`, `app.py`, and `hub/scheduler.py`.
-- Flip dormant/attic defaults off unless the owner confirms active use:
-  - IoT / Home Assistant,
-  - casting discovery,
-  - webhooks,
-  - plugins,
-  - voice,
-  - update checks,
-  - weather-alert webhook paths,
-  - chores if still unused,
-  - photos/ambient if not intentionally used.
-- Stop registering scheduler jobs for dormant systems unless explicitly enabled.
-- Stop loading unused browser scripts where feature flags are false, especially voice-related JS.
-- Keep core jobs:
-  - calendar refresh,
-  - weather refresh,
-  - sports ticker refresh,
-  - cache cleanup.
-- Add tests around scheduler job registration for enabled/disabled configs.
-- Update config docs to distinguish:
-  - core,
-  - optional but currently supported,
-  - attic/frozen,
-  - removed.
-
-### Non-Goals
-
-- Do not delete large subsystems yet unless removal is trivial and already proven safe.
-- Do not refactor `hub/routes/api.py` or `api_media_admin.py` just because they are large.
-- Do not remove `/health`.
-- Do not remove weather/calendar/sports cache priming.
-- Do not add replacement monitoring.
-
-### Acceptance Criteria
-
-- A default/safe config starts only core background jobs.
-- Attic jobs do not run unless explicitly enabled.
-- Disabled voice does not load noisy/unneeded active browser behavior.
-- Tests prove scheduler job registration follows config.
-- The app still boots and the main dashboard still works.
+Windows receives the most polished local-host experience. Linux and Raspberry Pi remain supported secondary hosts. Tablets and touch displays access the same running Family Hub instance over the local network.
 
 ---
 
-## Phase 5 - Roadmap and Narrative Cleanup
+## 5. Agent Operating Rules
 
-**Status:** Planned / Protective Steering Work
+These rules apply to every implementation phase, especially when using capable but rotating free coding models.
 
-### Goal
-
-Make the repo tell one coherent story so future humans and coding agents do not follow stale expansionist plans.
-
-This phase should rewrite or replace `docs/ROADMAP.md`, which currently contradicts the newer product direction by listing profiles/presence, voice wake word, and automatic update scheduling as future work.
-
-### Deliverables
-
-- Rewrite `docs/ROADMAP.md` so it aligns with this phases file and `PRODUCT_DIRECTION.md`.
-- Add a clear note that this file, `PRODUCT_DIRECTION.md`, and the latest product review supersede older expansionist plans.
-- Archive or delete stale planning files that are no longer steering documents, such as:
-  - old kitchen hub plan docs,
-  - obsolete rebrand notes,
-  - stale port references if superseded,
-  - dead frontend docs,
-  - any doc still promising removed systems.
-- Keep useful historical docs only if they are clearly marked as archive/history.
-- Clarify naming:
-  - Product name: Family Hub.
-  - Historical/internal package or service names may still use Kitchen Hub / `kitchen_hub` / `kitchen-hub`.
-  - Do not rename packages/services in this phase unless trivial.
-- Update `docs/API_CONTRACTS.md` if routes are no longer real or intentionally frozen.
-
-### Non-Goals
-
-- Do not perform broad code deletion in the docs cleanup phase unless it is a verified dead artifact.
-- Do not rename the Python package.
-- Do not create a sprawling new roadmap.
-- Do not keep two competing steering docs.
-
-### Acceptance Criteria
-
-- `docs/ROADMAP.md` no longer lists profiles/presence, voice wake word, automatic updates, or other rejected expansion items as committed future work.
-- Future direction points to appliance trust, privacy, staleness, launcher reliability, runtime slimming, and optional ambient/dead-zone work.
-- Archived docs are clearly marked or moved.
-- README, Product Direction, Product Review, and Roadmap no longer contradict each other.
-- A coding agent reading only README + Roadmap + Product Direction would understand the intended product.
+1. **Inspect current repo state before editing.** Do not assume this document perfectly matches future code.
+2. **Do not expand product scope.** If a missing capability is not required by the phase, do not invent it.
+3. **Keep phases cohesive.** Do not split work into microscopic sub-phases simply to make a smaller model comfortable.
+4. **Prefer existing architecture.** Reuse current services, providers, config, templates, tests, and styles before creating new abstractions.
+5. **Do not touch the private repo.**
+6. **Do not reintroduce private household values.**
+7. **Do not create hosted dependencies controlled by the project owner.**
+8. **Do not add auth/accounts for a trusted-home-LAN appliance.**
+9. **Do not turn the dashboard into draggable Lego blocks.**
+10. **Do not over-test fringe cases.** The target is reasonable happy-path confidence, not exhaustive compatibility.
+11. **Keep the current automated suite green** unless a test is intentionally updated for changed public-edition behavior.
+12. **Add targeted tests for new behavior**, but avoid combinatorial test matrices.
+13. When a phase reveals a genuine product decision not covered here, stop and document the decision rather than silently inventing scope.
 
 ---
 
-## Phase 6 - Launcher Reliability and Sibling App Health
+# Phase 1 — Public Genesis and Household-Neutral Baseline
 
-**Status:** Future / After Phases 2-5
+**Status:** Planned
 
-### Goal
+## Goal
 
-Make the homelab launcher trustworthy. Family Hub's app dock is the front door to sibling apps, so dead ports and broken buttons are trust failures on the hub even if the sibling app is the cause.
+Create the independent public Family Hub codebase and remove assumptions that only make sense in the private household.
 
-### Deliverables
+## Deliverables
 
-- Define a minimal launcher health contract for local apps:
-  - configured URL,
-  - optional health endpoint,
-  - last checked time,
-  - reachable/unreachable/unknown status.
-- Add tiny health dots or dimming to launcher entries:
-  - no big status page,
-  - no noisy alerts,
-  - no polling storm.
-- Check local app health at a safe cadence.
-- Keep open-tab/open-child behavior unchanged.
-- Add fallback copy for unreachable apps:
-  - "App unavailable"
-  - optional "last reachable" timestamp.
-- Document expected sibling app port/health behavior.
-- Add tests for:
-  - reachable local app,
-  - unreachable local app,
-  - disabled health checks,
-  - rendering of health dots/states.
+- Create the new public repository from a sanitized snapshot of the current private app.
+- Start with fresh Git history.
+- Add MIT license.
+- Preserve the existing core architecture and functioning dashboard.
+- Confirm safe tracked defaults in:
+  - `config.example.yaml`
+  - `.env.example`
+  - `docs/CONFIGURATION.md`
+  - `docs/DEPLOYMENT.md`
+- Remove or neutralize any remaining:
+  - private addresses,
+  - personal hostnames,
+  - LAN-specific values,
+  - private ports,
+  - private app names,
+  - credentials,
+  - tokens,
+  - household-specific favorite teams,
+  - screenshots or docs containing private information.
+- Remove the private/local homelab app-launcher configuration and any public-facing documentation that assumes companion Flask apps on localhost ports.
+- Keep normal public launcher destinations such as YouTube, ESPN, Pluto TV, and similar broadly useful services.
+- Define one persistent public-edition data/config location for installed runtime state.
+- Preserve current Google/ICS calendar, weather, sports, shopping, notes, timers, reference/conversion, commute, and launcher code where still useful.
+- Mark unsupported attic systems as out of scope rather than trying to rehabilitate them.
 
-### Non-Goals
+## Non-Goals
 
-- Do not absorb sibling app functionality into Family Hub.
-- Do not build a full homelab monitoring dashboard.
-- Do not add authentication or reverse-proxy orchestration.
-- Do not implement automatic restarts of sibling apps.
-- Do not make the launcher depend on all sibling apps being online to render.
+- No installer yet.
+- No first-run wizard yet.
+- No major UI redesign.
+- No PWA work.
+- No music implementation beyond preserving useful provider abstractions.
+- No new integrations.
 
-### Acceptance Criteria
+## Acceptance Criteria
 
-- Launcher buttons remain usable and glanceable.
-- Dead/unreachable local apps are visibly but quietly indicated.
-- No local app failure breaks the hub dashboard.
-- Health checks are bounded, cached, and configurable.
-- Tests pass.
-
----
-
-## Phase 7 - Single Hub Self-Status Glyph
-
-**Status:** Future / Optional but Recommended After Phase 3 or 6
-
-### Goal
-
-Give the owner one tiny appliance-grade status signal without resurrecting the deleted metrics system.
-
-### Deliverables
-
-- Add a small status glyph in a low-priority location, such as a corner of the shell or settings entry point.
-- Status should summarize only:
-  - core scheduler job freshness,
-  - provider failures,
-  - stale core data,
-  - maybe launcher health if Phase 6 is complete.
-- States should be simple:
-  - OK,
-  - attention,
-  - failed/needs action.
-- Tap/click reveals one-line reasons, not a metrics dashboard.
-- Include a route/service helper that gathers the minimal status.
-- Add tests for status aggregation.
-
-### Non-Goals
-
-- Do not re-add `/metrics`, Prometheus, self-healing, or a diagnostics dashboard.
-- Do not expose internal logs to the family-facing screen.
-- Do not make this a notification center.
-- Do not add external alerting.
-
-### Acceptance Criteria
-
-- Owner can tell at a glance whether the wall is healthy.
-- Family-facing experience remains calm and uncluttered.
-- The glyph does not distract from calendar/weather/commute/sports.
-- Status calculation is cheap and resilient.
-- Tests pass.
+- Public repo contains no known private household data.
+- Public repo boots using safe defaults.
+- Core dashboard still renders.
+- Existing automated tests remain green or have documented public-edition adjustments.
+- No public UI or docs refer to the owner's private Flask apps or localhost homelab ports.
+- Public and private repositories are independent.
 
 ---
 
-## Phase 8 - Ambient / Dead-Zone Resting-State Experiment
+# Phase 2 — Adaptive Dashboard, Persistent Settings, and First-Run Wizard
 
-**Status:** Future / Do Not Start Until Privacy, Trust, Runtime Slimming, and Roadmap Cleanup Are Done
+**Status:** Planned
 
-### Goal
+## Goal
 
-Improve the screen's resting state when the calendar week is sparse, without turning Family Hub into a photo frame or new app surface.
+Make Family Hub configurable by a normal user without editing YAML or `.env`, while ensuring optional modules disappear cleanly without leaving layout holes.
 
-The product direction warns that the week grid may optimize for the 5% planning moment rather than the 95% ambient glance moment. This phase tests whether the main canvas should breathe differently when little is scheduled.
+This phase intentionally combines configuration UI, wizard behavior, and adaptive layout because they are one product problem.
 
-### Deliverables
+## Deliverables
 
-- Define a narrow experiment:
-  - when week grid has low event density,
-  - show larger Today / Up Next / clock / weather context,
-  - optionally use an existing local photo/ambient backdrop if already configured.
-- Reuse existing ambient/photos code only if it is already safe and not a scope explosion.
-- Preserve the normal week calendar as the default functional anchor.
-- Add a config flag for the experiment.
-- Keep the bottom tiles, right rail, app dock, and sports ticker stable.
-- Add browser/manual validation at 1920x1080.
-- Add basic tests for feature gating and template selection.
+### A. Adaptive dashboard
 
-### Non-Goals
+Refactor the current fixed layout into predefined adaptive regions.
 
-- Do not build a full photo management system.
-- Do not add Google Photos sync.
-- Do not make ambient mode the default without owner approval.
-- Do not remove week/month/workweek calendar behavior.
-- Do not add new content modules.
+Required behavior:
 
-### Acceptance Criteria
+- Calendar remains the main anchor.
+- Core utilities remain available.
+- Optional modules render only when enabled.
+- Removing a module causes neighboring content to expand or move into a sensible predefined layout.
+- Weather disabled + music enabled:
+  - music shifts upward instead of leaving a weather-sized hole.
+- Sports disabled + launcher enabled:
+  - launcher settles to the bottom appropriately without reserving empty sports-ticker space.
+- Commute disabled:
+  - the relevant lower tile cleanly falls back to timer behavior or another defined layout.
+- No drag-and-drop.
+- No arbitrary user resizing.
+- A few internal layout presets or CSS grid variants are acceptable if needed.
 
-- Sparse-calendar mode improves glanceability without reducing trust.
-- Calendar remains accessible and unchanged when active/planning mode is needed.
-- Experiment can be disabled by config.
-- No new provider dependency is introduced.
-- Existing tests pass and manual kiosk check looks stable.
+### B. Permanent Settings access
 
----
+Add a small, unobtrusive **gear icon** that is always accessible regardless of whether the optional app launcher is enabled.
 
-## Phase 9 - Touch Usage Validation and Interaction Polish
+Settings must allow the user to revisit first-run choices later.
 
-**Status:** Conditional / Start Only After Real Usage Is Observed
+### C. First-run wizard
 
-### Goal
+On first launch with no completed household setup, automatically enter setup.
 
-Polish touch interactions only where real household usage proves they matter.
+The wizard should collect or configure:
 
-A key open assumption is whether anyone besides the builder actually touches the screen. If not, Family Hub should bias even harder toward glanceable display and defer touch-heavy polish.
+- household/display name, optional,
+- timezone,
+- 12/24-hour clock preference,
+- theme,
+- weather location,
+- calendar provider,
+- optional sports,
+- optional music,
+- optional commute,
+- optional public app launcher,
+- Windows startup preference where applicable.
 
-### Deliverables
+Do not expose raw YAML or `.env` editing.
 
-- Observe or log, lightly and privately, whether the following are used:
-  - shopping modal,
-  - timers,
-  - notes,
-  - weather modal,
-  - app launcher,
-  - miniplayer.
-- Based on observed use, polish only the top touch paths.
-- Candidate polish if justified:
-  - shopping add/check/clear flow,
-  - timer presets and cancel flow,
-  - modal close/focus behavior,
-  - app launcher fallback behavior,
-  - miniplayer connect/disconnected state.
-- Preserve minimum touch target standards from `docs/design/STYLE.md`.
-- Add targeted tests where behavior changes.
+### D. Settings persistence
 
-### Non-Goals
+Wizard and Settings must write through a safe application configuration layer rather than having template code directly manipulate arbitrary files.
 
-- Do not add analytics services.
-- Do not track personal behavior externally.
-- Do not polish every modal because it exists.
-- Do not add new touch-heavy features.
-- Do not prioritize touch polish over stale/failure trust work.
+Preserve advanced config files for developer/manual use, but normal users should never need them.
 
-### Acceptance Criteria
+## Non-Goals
 
-- Phase begins with a written note stating whether the screen is actually used for touch.
-- Only observed/high-value touch paths are changed.
-- No new large surface area is added.
-- Accessibility and focus behavior do not regress.
-- Tests pass.
+- No Google OAuth polish yet beyond whatever is required to reach the next phase.
+- No Windows installer yet.
+- No PWA yet.
+- No custom dashboard-builder system.
+- No user accounts.
+- No phone-specific UI.
+
+## Acceptance Criteria
+
+- Fresh install opens the wizard.
+- Completing the wizard produces a working dashboard.
+- Reopening Settings allows module choices to be changed later.
+- Disabling each optional major region does not leave an obvious blank hole.
+- A representative "full" layout and a representative "minimal optional modules" layout both render cleanly.
+- Core calendar, shopping, notes, timers, clock/date, and conversion/reference tools remain available.
+- Existing tests remain green plus targeted tests for configuration persistence and adaptive rendering.
 
 ---
 
-## Phase 10 - Weather, Calendar, Commute, and Sports Resting-State Refinement
+# Phase 3 — Household Integrations: Calendar, Weather, Sports, and Commute
 
-**Status:** Future / Carefully Bounded
+**Status:** Planned
 
-### Goal
+## Goal
 
-Refine the core visible information surfaces after freshness/failure states are complete, focusing on the resting dashboard rather than deeper drill-ins.
+Turn existing private-style provider configuration into friendly household onboarding for the public edition.
 
-### Deliverables
+## Deliverables
 
-Potential refinements, chosen only if justified:
+### A. Google Calendar
 
-- Weather:
-  - improve concise current/hourly/daily readability,
-  - keep modal useful but avoid more drill-in layers.
-- Calendar/Up Next:
-  - better empty-day or low-event presentation,
-  - preserve week/month/workweek and add-event behavior.
-- Commute:
-  - preserve commute-or-quick-timer fallback,
-  - avoid exposing raw private addresses client-side.
-- Sports ticker:
-  - tune spacing, grouping, cadence, and favorite-team emphasis,
-  - preserve optional/configured nature.
+Support:
 
-### Non-Goals
+- Google Calendar OAuth,
+- ICS calendar feeds.
 
-- Do not add new weather providers unless an existing provider is unreliable.
-- Do not expand the weather modal into a weather app.
-- Do not add sports pages beyond existing surfaces unless a separate phase approves it.
-- Do not make commute a navigation app.
-- Do not add Command Center-style recommendations here.
+Public Google OAuth should use the Family Hub OAuth application rather than requiring friends to create their own Google Cloud project.
 
-### Acceptance Criteria
+Expected user experience:
 
-- The dashboard is easier to read from the kitchen display.
-- Existing interactions continue to work.
-- Core surfaces retain freshness/failure badges.
-- No new dependency or provider is added without a documented reason.
-- Tests and manual display check pass.
+1. Choose Google Calendar.
+2. Click **Connect Google Calendar**.
+3. Browser opens Google's authorization flow.
+4. User may see Google's one-time unverified/personal-use warning.
+5. User authorizes Family Hub.
+6. Tokens are stored locally on their own host.
+7. Family Hub uses the selected calendar(s).
 
----
+The Google project should be configured for production/personal-use rather than a seven-day testing-token workflow.
 
-## Phase 11 - Settings and Admin Surface Slimming
+Do not attempt full public OAuth verification in this phase.
 
-**Status:** Future / After Runtime Attic Shutdown
+### B. Weather
 
-### Goal
+- Keep Open-Meteo or current safe provider as the default.
+- Let the user choose a friendly city/location without manually entering coordinates where practical.
+- Weather is optional.
+- Disabled weather must collapse cleanly through Phase 2's layout system.
 
-Make settings/admin reflect the real appliance rather than every historical subsystem.
+### C. Sports
 
-The current settings/admin surface is large for a one-admin household appliance. It should be honest, not expansive.
+Provide a useful-but-bounded sports picker.
 
-### Deliverables
+Primary supported leagues:
 
-- Review `templates/partials/settings_view.html`, admin templates, `api_admin`, and `api_media_admin` surfaces.
-- Hide or remove settings for disabled/frozen systems unless explicitly needed.
-- Group settings into:
-  - Core dashboard,
-  - Providers,
-  - Launcher,
-  - Kiosk/deployment,
-  - Experimental/attic.
-- Do not add "Settings Phase 1/2" polish from the stale roadmap unless re-justified.
-- Make stale/error/provider reconnect states visible where settings are the right repair surface.
-- Stop adding new routes to the largest route files unless the phase explicitly calls for it.
-- Document any route/file split recommendation without necessarily doing it.
+- NFL
+- MLB
+- NBA
+- NHL
+- MLS
+- NCAA football
+- NCAA basketball
 
-### Non-Goals
+Also support a limited **major events** category when data is reasonably available through current/public providers.
 
-- Do not build a full admin console.
-- Do not refactor all route files in this phase.
-- Do not expose attic controls prominently.
-- Do not add multi-user profiles or auth.
-- Do not add plugin marketplace/settings.
+Examples of desirable major-event ticker coverage:
 
-### Acceptance Criteria
+- The Masters and similarly significant PGA majors
+- Wimbledon
+- U.S. Open tennis
+- Australian Open
+- French Open
+- Olympics
 
-- Settings/admin no longer imply frozen features are active product commitments.
-- Core repair actions are discoverable.
-- Disabled features are hidden or clearly marked.
-- No major dashboard regressions.
-- Tests pass.
+For special events, keep coverage intentionally lightweight:
 
----
+- top headlines,
+- major result/status,
+- top few leaderboard positions when appropriate,
+- no attempt to become a full sports application.
 
-## Phase 12 - Attic Code Deletion and Megafile Containment
+Do not add obscure leagues or events merely because a provider exposes them.
 
-**Status:** Future / Only After Runtime Shutdown and Narrative Cleanup
+### D. Commute
 
-### Goal
+- Commute remains optional.
+- User can enter home/work locations through Settings.
+- Provider credentials stay server-side.
+- If disabled or outside configured use conditions, the dashboard falls back cleanly to its non-commute state.
+- Preserve privacy boundary: tablet/browser clients should not need raw stored addresses.
 
-Reduce maintenance load by deleting verified-dead remnants and preventing large route files from growing further.
+## Non-Goals
 
-This is not a refactor-for-refactor's-sake phase. It is cleanup after runtime risk has been removed.
+- No Outlook/Microsoft Calendar.
+- No full sports site.
+- No complete golf/tennis leaderboards.
+- No fantasy sports.
+- No cloud sync service.
+- No multi-household support.
 
-### Deliverables
+## Acceptance Criteria
 
-- Use `docs/ATTIC_REACHABILITY_AUDIT.md` as the starting point, then re-verify current reachability.
-- Candidate deletion/removal items if still unused:
-  - orphaned news adapter/aggregator remnants,
-  - dead `hub_ui/` parallel frontend,
-  - obsolete rebrand/port/reference files,
-  - unused voice browser loading if already disabled,
-  - unused webhook/casting/update/admin surfaces if runtime shutdown proved safe.
-- Add a "do not add to megafiles" rule:
-  - `hub/routes/api.py`,
-  - `hub/routes/api_media_admin.py`,
-  - giant settings template.
-- If a route split is necessary, do the smallest extraction around a coherent subsystem.
-- Remove tests only when the feature is truly removed.
-- Keep migrations safe; avoid destructive database changes unless clearly needed.
-
-### Non-Goals
-
-- Do not delete disabled but intentionally retained features without owner decision.
-- Do not do broad architectural rewrites.
-- Do not split files merely for aesthetics.
-- Do not change dashboard behavior as a side effect.
-- Do not combine this with new feature work.
-
-### Acceptance Criteria
-
-- Verified dead artifacts are removed or archived.
-- No active dashboard route/template breaks.
-- Tests are updated to match intentional removals.
-- Core app still boots.
-- Route file growth is constrained by documented convention.
+- Google authorization completes from a clean public install.
+- Google Calendar can read events; existing write behavior should remain if already supported.
+- ICS works as a no-OAuth alternative.
+- Weather can be configured without editing files.
+- User can choose major U.S. teams/leagues plus NCAA.
+- Major-event support is bounded and does not distort the ticker when unavailable.
+- Commute can be enabled/disabled through Settings.
+- Disabled integrations do not produce broken or empty UI shells.
+- Targeted integration/config tests pass.
 
 ---
 
-## Phase 13 - Chores, Voice, IoT, Plugins, and Other Conditional Decisions
+# Phase 4 — Internet Radio and Public Media Launcher
 
-**Status:** Conditional / Owner Decision Required Before Any Build
+**Status:** Planned
 
-### Goal
+## Goal
 
-Make explicit yes/no decisions for features that are currently fossils, temptations, or sibling-app candidates.
+Provide useful music without Spotify or other commercial-service developer-account friction, and preserve a clean public media launcher without private homelab baggage.
 
-### Deliverables
+## Deliverables
 
-For each item, write a decision note before coding:
+### A. Internet radio
 
-- Chores:
-  - either earns a real tile because the household uses it,
-  - or remains disabled/deletion candidate.
-- Voice:
-  - default answer is no on-hub voice.
-  - if ever built, prefer a separate sibling service that calls hub APIs.
-- IoT/Home Assistant:
-  - default answer is no on the hub.
-  - if needed, prefer a sibling smart-home app or Command Center.
-- Plugins:
-  - default answer is no plugin ecosystem.
-- Profiles/presence:
-  - default answer is no until household need is proven.
-- Automatic updates:
-  - default answer is no; use git pull + restart.
-- Backup:
-  - keep only if it is actively useful for local recovery.
+Turn the existing Radio Browser and SomaFM provider skeletons into real usable music sources.
 
-### Non-Goals
+Supported V1 music:
 
-- Do not start implementing any of these based on old roadmap entries.
-- Do not add "just in case" settings for these features.
-- Do not use existing code as proof a feature should exist.
-- Do not turn Family Hub into Command Center.
+- Radio Browser station search/browse
+- SomaFM curated stations
+- Saved/favorite stations
+- Optional custom direct stream URL if simple and reliable
 
-### Acceptance Criteria
+Expected player behavior:
 
-- Each conditional subsystem has an explicit owner decision:
-  - keep dormant,
-  - delete,
-  - sibling app,
-  - future phase.
-- `docs/ROADMAP.md` reflects those decisions.
-- Default app behavior remains appliance-shaped.
-- No conditional feature runs by default.
+- play/pause,
+- station title,
+- current station/source,
+- basic volume control if appropriate,
+- graceful failure when a station stream is dead or unsupported.
 
----
+Do not assume every community station URL is permanent.
 
-## Phase 14 - Kiosk Deployment and Appliance Hardening
+### B. Music UX
 
-**Status:** Future / After Trust and Runtime Slimming
+Music is optional.
 
-### Goal
+If enabled:
 
-Make the deployed wall appliance boring to run on the target machine.
+- present radio as the default account-free music experience,
+- avoid exposing implementation/provider complexity unnecessarily.
 
-### Deliverables
+If disabled:
 
-- Reconcile deployment naming:
-  - Family Hub product name,
-  - historical Kitchen Hub service/path names if retained.
-- Validate Linux/systemd deployment docs against actual scripts:
-  - app service,
-  - kiosk service,
-  - restart behavior,
-  - health check,
-  - Chromium flags.
-- Validate Raspberry Pi or small-PC setup assumptions.
-- Ensure startup after reboot:
-  - app starts,
-  - browser opens,
-  - cache warms,
-  - dashboard shows stale/fresh states honestly.
-- Review burn-in mitigation config and night-dim behavior:
-  - keep only if it serves the actual display.
-- Add a short manual deployment checklist.
+- music surfaces disappear and the layout reflows.
 
-### Non-Goals
+### C. Public media launcher
 
-- Do not build self-healing.
-- Do not build automatic update scheduling.
-- Do not add external monitoring.
-- Do not require internet for core local functions beyond configured providers.
-- Do not make deployment generic for many users.
+Keep the broadly useful launcher concept.
 
-### Acceptance Criteria
+Allowed default examples:
 
-- Deployment docs match current scripts and service names.
-- `/health` works after boot.
-- Kiosk can recover from normal reboot/power loss.
-- Core tiles render cached/stale/fresh states appropriately after startup.
-- Manual checklist is short enough to actually use.
+- YouTube
+- ESPN
+- Pluto TV
+- other broadly useful streaming/web destinations already present and appropriate
+
+Remove:
+
+- owner's localhost Flask applications,
+- custom homelab ports,
+- private companion app labels,
+- "add your own homelab service" functionality for V1.
+
+The public launcher is curated, not a custom-homelab platform.
+
+### D. Private-repo follow-up
+
+After this phase works in the public edition, manually port the internet-radio provider improvements back into the owner's private Family Hub repo.
+
+Do not couple the repos.
+
+## Non-Goals
+
+- No Spotify.
+- No Apple Music.
+- No YouTube Music integration.
+- No Pandora.
+- No iHeartRadio.
+- No TuneIn integration.
+- No local music folder support.
+- No custom homelab-app builder.
+
+## Acceptance Criteria
+
+- Several Radio Browser stations play successfully.
+- Several SomaFM stations play successfully.
+- One deliberately dead/bad station fails gracefully rather than breaking the player.
+- Music can be disabled without a layout hole.
+- Public launcher contains no private/local Flask app assumptions.
+- Launcher still behaves sensibly in kiosk/large-screen use.
+- Targeted provider/player tests pass.
 
 ---
 
-## Phase 15 - Long-Term Optional Appliance Improvements
+# Phase 5 — Touch, Tablet Access, LAN Hosting, and PWA Basics
 
-**Status:** Future / Opportunistic Only
+**Status:** Planned
 
-### Goal
+## Goal
 
-Capture reasonable long-term improvements that fit the appliance identity, while preventing them from becoming near-term distractions.
+Make Family Hub feel natural on a touchscreen and make it simple for a user to open the same household Hub on an iPad or Android tablet.
 
-### Candidate Deliverables
+## Deliverables
 
-Only consider these after earlier phases are complete:
+### A. Touch-first pass
 
-- Better app dock organization if sibling apps grow.
-- Optional launcher grouping/folder refinements.
-- Display-safe burn-in tweaks based on real panel behavior.
-- Better offline/cached empty states.
-- More deliberate motion for modal entry and refresh, as long as it stays calm.
-- Light theme counterpart only if real use justifies it.
-- Additional sibling-app health metadata if Phase 6 proves useful.
+Audit interactive targets and remove mouse-only assumptions.
 
-### Non-Goals
+Focus especially on:
 
-- No meal planning inside Family Hub.
-- No package monitor tile inside Family Hub.
-- No budget dashboard inside Family Hub.
-- No school/lunch/news/transit modules unless they replace an existing core surface and are explicitly approved.
-- No general assistant behavior.
-- No multi-user operating system.
-- No plugin ecosystem.
+- calendar event chips,
+- navigation controls,
+- shopping,
+- notes,
+- timers,
+- conversion/reference tools,
+- settings,
+- modal buttons,
+- text inputs,
+- scrolling,
+- accidental text selection,
+- hover-only affordances.
 
-### Acceptance Criteria
+Target approximately 44–48px interactive areas where practical without destroying calendar density.
 
-- Any long-term improvement has a written reason tied to the core loop.
-- No improvement adds a new permanent dashboard surface without replacing or simplifying another surface.
-- The app remains glanceable on one screen.
-- Family Hub remains a launcher for sibling apps, not the container for all sibling-app functionality.
+Desktop mouse use must continue to work.
+
+### B. LAN server behavior
+
+Windows/Linux host must be able to serve Family Hub to other devices on the same trusted home network.
+
+No login screen is required.
+
+### C. Windows Firewall behavior
+
+Windows setup should create or request the narrow firewall permission needed for local tablet access on private networks.
+
+User-facing wording should explain the actual intended benefit, for example:
+
+> **Allow tablet access**  
+> This lets your iPad or Android tablet connect to Family Hub while both devices are on your home Wi-Fi.
+
+Avoid vague wording such as "allows devices on your network."
+
+### D. QR connection helper
+
+Add a Settings surface such as:
+
+**Use Family Hub on another screen**
+
+Show:
+
+- detected local Family Hub address,
+- QR code,
+- short iPad instructions,
+- short Android/tablet instructions.
+
+### E. PWA basics
+
+Add:
+
+- web app manifest,
+- Family Hub name,
+- theme/background colors,
+- app icons,
+- favicon,
+- standalone display metadata.
+
+Provide home-screen/add-to-home instructions where supported.
+
+Do **not** make automatic trusted HTTPS a V1 requirement.
+
+Plain LAN browser/tablet access is acceptable for the friend beta. Full installability may vary by platform/browser when using local HTTP.
+
+### F. Offline behavior
+
+If internet access fails but the Family Hub host remains available:
+
+- shopping remains usable,
+- notes remain usable,
+- timers remain usable,
+- cached provider data may remain visible with stale/error treatment.
+
+If the host itself is unavailable, clients may simply show that Family Hub cannot be reached.
+
+No cross-device offline synchronization.
+
+## Non-Goals
+
+- No phone-first redesign.
+- No automatic Tailscale setup.
+- No automatic certificate authority.
+- No cloud relay.
+- No internet exposure.
+- No offline-sync engine.
+- No exhaustive tablet/browser certification.
+
+## Acceptance Criteria
+
+- Normal desktop interaction still works.
+- Major controls are practical on touch.
+- One representative tablet-sized viewport renders cleanly.
+- A tablet on the same LAN can reach the Windows/Linux host.
+- QR helper points to the correct local address in the supported normal case.
+- Firewall messaging explicitly explains tablet access.
+- Manifest/favicon/app icon are present.
+- Basic Add-to-Home/PWA guidance exists.
+- Internet outage does not break local shopping/notes/timers.
 
 ---
 
-## Phase 16 - Explicitly Deferred / Do Not Build Without New Approval
+# Phase 6 — Windows Appliance Packaging and Secondary Linux/Pi Deployment
 
-**Status:** Intentionally Deferred
+**Status:** Planned
 
-### Goal
+## Goal
 
-Prevent old roadmap gravity from re-opening rejected or unproven product directions.
+Make Windows installation and normal daily launching require no Python or Git knowledge while preserving Family Hub as a normal self-hosted web application for secondary hosts.
 
-### Deferred Items
+## Deliverables
 
-These should not be implemented unless the owner explicitly creates a new phase and explains why the prior decision changed:
+### A. Windows installer
 
-- Profiles and presence strip.
-- Local wake word / always-listening voice.
-- On-hub speech-to-text command handling.
-- Automatic update scheduling.
-- General plugin marketplace/ecosystem.
-- Full smart-home control.
-- General Home Assistant control panel.
-- Multi-user auth/profiles for the kitchen display.
-- Full metrics dashboard or Prometheus.
-- Self-healing/watchdog intelligence beyond systemd restart.
-- Command Center-style planning, workflows, approvals, or memory.
-- Package/budget/home inventory feature absorption into the hub.
-- Large frontend framework migration.
-- Generic platformization for other households.
+Produce a downloadable installer, e.g.:
 
-### Non-Goals
+`FamilyHub-Setup.exe`
 
-- This phase is not a backlog.
-- This phase is not an invitation to implement deferred items later by default.
-- This phase should shrink over time only when owner decisions are explicit.
+The user should not need:
 
-### Acceptance Criteria
+- Python,
+- Git,
+- pip,
+- a virtual environment,
+- command-line startup.
 
-- Deferred items are absent from active roadmap phases.
-- Future coding prompts do not cite stale roadmap entries as approval to build them.
-- Any new approval for a deferred item includes:
-  - why the old decision changed,
-  - why it belongs in Family Hub instead of a sibling app or Command Center,
-  - how it preserves the appliance identity.
+Installer should provide:
+
+- Family Hub application files/runtime,
+- Start Menu shortcut,
+- desktop shortcut,
+- Family Hub icon,
+- uninstall support,
+- persistent user data/config location separate from application files.
+
+Unsigned beta builds may trigger Windows SmartScreen / unknown-publisher warnings. Document the expected **More info → Run anyway** flow rather than purchasing signing infrastructure for this hobby release.
+
+### B. Windows host and desktop shell
+
+The normal Windows experience should be:
+
+1. Double-click Family Hub.
+2. Hidden/local host starts if needed.
+3. Family Hub UI opens.
+4. Closing the visible window does not necessarily stop household hosting.
+5. Host remains available from the notification tray.
+6. Tray menu includes at minimum:
+   - Open Family Hub
+   - Settings or Open Settings
+   - Quit Family Hub
+
+**Quit Family Hub** stops the local host.
+
+Use a thin native/WebView-style shell or equivalent approach that preserves the existing web frontend and presents Family Hub with its own application identity/icon rather than as a generic Edge taskbar window.
+
+Do not rewrite the frontend as a native desktop app.
+
+### C. Startup option
+
+First-run/setup may offer:
+
+**Start Family Hub with Windows**
+
+This is optional.
+
+Do **not** add a "keep this PC awake" setting.
+
+### D. Manual upgrades
+
+V1 updates are manual.
+
+Expected flow:
+
+1. User downloads a newer installer.
+2. Runs it.
+3. Application files update.
+4. Household config/data remains intact.
+
+No automatic update daemon.
+
+### E. Linux / Raspberry Pi
+
+Keep a secondary self-hosted path for:
+
+- Debian/Ubuntu,
+- Raspberry Pi OS or similar Linux.
+
+Provide simple documented commands or a lightweight install script/container only if it materially reduces friction.
+
+The supported claim should be modest:
+
+- Windows is primary.
+- Linux/Pi is best-effort secondary.
+- A Debian VM/WSL validation is sufficient before beta if no physical Pi is available.
+- Do not claim a physical Raspberry Pi was tested unless it actually was.
+
+## Non-Goals
+
+- No Microsoft Store publication.
+- No paid code-signing requirement.
+- No automatic updater.
+- No NAS-specific certification.
+- No Docker/NAS matrix.
+- No macOS packaging.
+- No mobile native app.
+
+## Acceptance Criteria
+
+- One normal Windows 10/11 install path works without Python/Git.
+- Desktop shortcut launches Family Hub.
+- Family Hub has its own icon/identity.
+- Tray host behavior works.
+- Optional startup behavior works.
+- Quit actually stops the host.
+- Upgrade/install-over preserves household state in the normal tested path.
+- Debian/Linux secondary launch works in one available test environment.
+- Linux/Pi documentation clearly labels best-effort status.
 
 ---
 
-## Recommended Phase Grouping for Agentic Coding
+# Phase 7 — Beta Handoff, Minimal QA, Documentation, and Release
 
-Use these as broad handoff batches:
+**Status:** Planned
 
-1. **Phase 2 only:** Privacy and config hygiene. Keep isolated.
-2. **Phases 3-4:** Trust states plus runtime attic shutdown, if the agent can keep changes separated and tests clear.
-3. **Phase 5:** Narrative cleanup. Good for a cheaper model after Phase 2-4 are done.
-4. **Phases 6-7:** Launcher health and small self-status glyph, after trust patterns exist.
-5. **Phase 8:** Ambient experiment, only after the product is trustworthy and slimmed.
-6. **Phases 11-12:** Settings/admin slimming and attic deletion, only after runtime shutdown proves safe.
+## Goal
 
-For Fable or another high-end model, use it for product/architecture review and messy cross-cutting judgment. For implementation, use the lowest capable model that can safely inspect the repo and keep changes bounded.
+Stop building when the normal friend experience works. Package the project so invited users can install it without needing a personal walkthrough for every step.
+
+This is intentionally **not** a production-hardening phase.
+
+## Deliverables
+
+### A. README for normal humans
+
+Top of README should explain:
+
+- what Family Hub is,
+- screenshot,
+- that it is self-hosted,
+- that household data stays on the user's own host,
+- Windows download path,
+- basic tablet connection concept,
+- Linux/Pi secondary path,
+- hobby/best-effort status.
+
+The first instructions should not be Git clone commands.
+
+### B. Simple install guide
+
+Windows:
+
+1. Download installer.
+2. If Windows SmartScreen warns, use **More info → Run anyway**.
+3. Complete setup wizard.
+4. Connect Google Calendar if desired.
+5. Open Family Hub.
+
+Tablet:
+
+1. Open Family Hub Settings.
+2. Choose **Use Family Hub on another screen**.
+3. Scan QR code.
+4. Follow the shown iPad/Android home-screen instructions.
+
+Linux/Pi:
+
+- concise secondary-host instructions,
+- clearly marked best effort.
+
+### C. Project expectations
+
+Include a short statement similar to:
+
+> Family Hub is a hobby project shared as-is for friends-and-family use. The documented normal configurations are tested on a best-effort basis. Other setups may work but are not guaranteed. Issues and pull requests are welcome, but there are no support or response-time commitments.
+
+GitHub issues/PRs may remain enabled, but there is no requirement for the owner to operate the repo as a support desk.
+
+### D. Minimal happy-path QA
+
+Required before friend beta:
+
+- current automated test suite passes,
+- targeted tests for new public-edition behavior pass,
+- one normal Windows install,
+- one normal Windows launch,
+- one tray-close/reopen/quit flow,
+- one startup/reboot check if practical,
+- one Google Calendar authorization,
+- one calendar read/write sanity check if write support is retained,
+- one weather setup,
+- one sports setup,
+- one internet-radio playback check,
+- one representative touch/tablet viewport check,
+- one same-LAN tablet/browser connection,
+- one adaptive-layout check with several optional modules disabled,
+- one Linux/Debian secondary-host smoke test if available.
+
+Not required:
+
+- every module toggle combination,
+- every browser,
+- every NAS vendor,
+- every Windows build,
+- every antivirus product,
+- every tablet model,
+- weird drive-letter/path combinations,
+- obscure network arrangements,
+- fringe compatibility investigations unless a problem affects the normal supported path.
+
+### E. Beta release
+
+Publish an initial friend-facing beta release rather than calling it 1.0.
+
+Example:
+
+`Family Hub 0.1 Beta`
+
+Attach the Windows installer and concise release notes.
+
+## Non-Goals
+
+- No "production readiness" certification.
+- No exhaustive performance testing.
+- No long-term support promise.
+- No telemetry.
+- No analytics.
+- No crash-reporting backend operated by the owner.
+- No broad marketing/discovery campaign.
+- No requirement to fix every reported issue before release.
+
+## Acceptance Criteria
+
+A reasonably technical but non-developer friend can:
+
+1. find the release,
+2. download the Windows installer,
+3. install it,
+4. complete setup,
+5. see a working Family Hub,
+6. connect a tablet on the same home network using the provided instructions,
+7. use the core features without touching Python, Git, YAML, or `.env`.
+
+At that point the beta is considered complete.
+
+---
+
+# 6. Testing Philosophy
+
+Family Hub Public Edition is a **generosity project**, not a commercial software obligation.
+
+The testing target is:
+
+> **Reasonable confidence that the documented normal path works.**
+
+It is not:
+
+> **Proof that Family Hub behaves correctly under every unusual machine, filesystem, browser, network, antivirus, NAS, display, driver, or historical-software combination.**
+
+When a fringe bug appears after beta:
+
+- fix it later if it is easy and useful,
+- document it if necessary,
+- or leave it as a known limitation.
+
+A fringe issue should not automatically block a phase or release.
+
+---
+
+# 7. Scope-Creep Guardrails
+
+Before accepting new work, ask:
+
+1. Does this help a friend install Family Hub?
+2. Does this help a friend configure Family Hub?
+3. Does this make the large-screen/touch experience materially better?
+4. Does this make normal local hosting more reliable?
+5. Is it required by a current supported integration?
+
+If the answer is no, it probably does not belong in the beta.
+
+Examples that should normally be deferred:
+
+- Outlook because "someone might use it someday"
+- Apple Music because it exists
+- custom dashboard widgets
+- smart-home discovery
+- profiles
+- household accounts
+- cloud sync
+- remote internet access
+- automatic HTTPS
+- phone-specific redesign
+- NAS vendor-specific installers
+- backup systems
+- self-healing services
+- automatic update infrastructure
+
+The private Family Hub already demonstrated how easily useful appliance software can accumulate attic systems. The public edition should remain deliberately narrower.
+
+---
+
+# 8. Expected Work Shape
+
+This plan intentionally uses **seven substantial phases**, not dozens of micro-phases.
+
+A capable coding agent should normally receive an entire phase or a cohesive segment within a phase, inspect the repository, implement the work, run relevant tests, and report:
+
+- files changed,
+- behavior implemented,
+- tests run,
+- known limitations,
+- anything deferred because it would expand scope.
+
+The goal is not to make each phase small enough for a tiny model. The goal is to make each phase coherent enough that a capable rotating free coding model can execute it without having to infer the product.
+
+---
+
+# 9. Definition of Done for the Public-Edition Project
+
+The project is done when:
+
+- the public repo is clean and household-agnostic,
+- a friend can install it on Windows without developer tooling,
+- first-run setup is understandable,
+- Calendar is functional,
+- core household tools work,
+- optional modules reflow cleanly,
+- weather/sports/commute are configurable,
+- internet radio provides account-free music,
+- the public launcher contains only broadly useful destinations,
+- touchscreen use is practical,
+- a tablet can connect over the trusted home LAN,
+- Family Hub has its own app identity/icon,
+- Windows tray/startup behavior is usable,
+- Linux/Pi has a reasonable secondary path,
+- documentation explains the normal path,
+- normal-path smoke testing passes,
+- and no one involved feels obligated to turn it into a commercial support project.
+
+Anything beyond that is future work only if it is actually worth doing.

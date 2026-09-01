@@ -1,8 +1,8 @@
-// Voice command functionality for Kitchen Hub
+// Voice command functionality for Family Hub
 let recognition = null;
 let isListening = false;
 let isVoiceEnabled = false;
-let wakeWord = 'kitchen'; // Default wake word
+let wakeWord = 'hey hub'; // Default wake word
 let isWaitingForWakeWord = true; // Whether we're waiting for the wake word
 
 // Check if the browser supports speech recognition

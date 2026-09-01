@@ -1,5 +1,5 @@
 """
-Tests for the Kitchen Hub plugin system.
+Tests for the Family Hub plugin system.
 """
 
 import json

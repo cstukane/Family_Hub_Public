@@ -44,11 +44,11 @@ def test_media_client_js():
         print("[FAIL] Domain validation NOT found")
         return False
 
-    # Check for POST requests to media_launcher endpoints
-    if "'http://127.0.0.1:7666/v1/open_media'" in content and "'http://127.0.0.1:7666/v1/close_media'" in content:
-        print("[PASS] POST requests to media_launcher endpoints found")
+    # Check for POST requests to media endpoints (media launcher is dormant in Public V1)
+    if "openMedia" in content and "closeMedia" in content:
+        print("[PASS] Media client functions found")
     else:
-        print("[FAIL] POST requests to media_launcher endpoints NOT found")
+        print("[FAIL] Media client functions NOT found")
         return False
 
     # Check for error handling

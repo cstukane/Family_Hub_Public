@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script to set up Let's Encrypt SSL certificates for Kitchen Hub
+# Script to set up Let's Encrypt SSL certificates for Family Hub
 # Usage: sudo ./setup_ssl.sh yourdomain.com
 
 set -e

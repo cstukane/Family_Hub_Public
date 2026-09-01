@@ -180,7 +180,7 @@ def backup_db(backup_dir: Optional[str] = None) -> str:
     os.makedirs(backup_dir, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_path = os.path.join(backup_dir, f"kitchen_hub.db.{timestamp}.bak")
+    backup_path = os.path.join(backup_dir, f"family_hub.db.{timestamp}.bak")
     shutil.copy2(db_path, backup_path)
     current_app.logger.info("Database backup created: %s", backup_path)
     return backup_path

@@ -1,4 +1,4 @@
-"""Sports service for the Kitchen Hub application."""
+"""Sports service for the Family Hub application."""
 
 import logging
 from datetime import datetime

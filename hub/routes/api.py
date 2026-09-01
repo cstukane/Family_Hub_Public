@@ -218,7 +218,7 @@ def _build_calendar_view_context(view_mode: str, offset_days: int = 0, month_off
     return context
 
 
-_GRID_TZ = ZoneInfo("America/New_York")
+_GRID_TZ = ZoneInfo("UTC")
 _MIN_GRID_SPAN_HOURS = 8
 _DEFAULT_GRID_START_HOUR = 8
 _DEFAULT_GRID_END_HOUR = 20
@@ -894,7 +894,7 @@ def create_calendar_event():
 def media_open_proxy():
     """Proxy media-open requests to the local launcher service to avoid browser CORS."""
     config = current_app.config.get("CONFIG")
-    launcher_endpoint = "http://127.0.0.1:7666/v1/open_media"
+    launcher_endpoint = ""
     if config and hasattr(config, "media") and config.media:
         launcher_endpoint = getattr(config.media, "launcher_endpoint", launcher_endpoint)
 
@@ -919,7 +919,7 @@ def media_open_proxy():
 def media_close_proxy():
     """Proxy media-close requests to the local launcher service."""
     config = current_app.config.get("CONFIG")
-    base = "http://127.0.0.1:7666"
+    base = ""
     if config and hasattr(config, "media") and config.media:
         endpoint = getattr(config.media, "launcher_endpoint", "")
         if endpoint:
@@ -1083,7 +1083,7 @@ def get_calendar_day_events():
 
     try:
         target_date = datetime.fromisoformat(date_str).date()
-        local_tz = ZoneInfo("America/New_York")
+        local_tz = ZoneInfo("UTC")
 
         # Fetch a buffer around the local day, then filter by local date to
         # match the UI grouping (handles late-night UTC spillover).
@@ -1308,7 +1308,7 @@ def get_calendar_status_toast():
 def get_system_status():
     """Display system status as a toast notification."""
     # This endpoint is called less frequently (every 5 minutes) to avoid spam
-    system_info = f"Kitchen Hub v{__version__} running normally on {platform.system()}"
+    system_info = f"Family Hub v{__version__} running normally on {platform.system()}"
 
     # Use JavaScript to show the toast notification
     script = f"""
@@ -1329,7 +1329,7 @@ def get_status_summary():
     """Return consolidated status for badges and toasts in a single call."""
     weather_status = _format_weather_status_text(weather.get_weather_data(), include_prefix=True)
     calendar_status = _format_calendar_status_text(calendar.get_calendar_status())
-    system_info = f"Kitchen Hub v{__version__} running normally on {platform.system()}"
+    system_info = f"Family Hub v{__version__} running normally on {platform.system()}"
 
     return jsonify(
         {

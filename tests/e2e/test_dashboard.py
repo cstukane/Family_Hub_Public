@@ -13,7 +13,7 @@ from .pages.dashboard_page import DashboardPage
 def test_page_title(page: Page, live_server_url: str):
     """Page has correct title."""
     page.goto(live_server_url)
-    expect(page).to_have_title("Kitchen Hub")
+    expect(page).to_have_title("Family Hub")
 
 
 def test_main_structural_elements_visible(page: Page, live_server_url: str):

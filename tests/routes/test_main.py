@@ -6,7 +6,7 @@ def test_index_route(client):
     """Test the index route."""
     response = client.get("/")
     assert response.status_code == HTTP_OK
-    assert b"Kitchen Hub" in response.data
+    assert b"Family Hub" in response.data
 
 
 def test_health_route(client):
@@ -28,11 +28,11 @@ def test_view_route(client):
     """Test the view route."""
     response = client.get("/view/calendar")
     assert response.status_code == HTTP_OK
-    assert b"Kitchen Hub" in response.data
+    assert b"Family Hub" in response.data
 
     response = client.get("/view/media")
     assert response.status_code == HTTP_OK
-    assert b"Kitchen Hub" in response.data
+    assert b"Family Hub" in response.data
 
 
 def test_cooking_view_route(client):

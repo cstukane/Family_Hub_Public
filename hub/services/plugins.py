@@ -1,5 +1,5 @@
 """
-Services for managing plugins in the Kitchen Hub application.
+Services for managing plugins in the Family Hub application.
 """
 
 from typing import Any, Dict, List

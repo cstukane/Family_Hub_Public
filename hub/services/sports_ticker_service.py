@@ -1,4 +1,4 @@
-"""Sports ticker service for the Kitchen Hub application."""
+"""Sports ticker service for the Family Hub application."""
 
 import json
 import logging
@@ -27,7 +27,7 @@ LIVE_CACHE_MAX_AGE_SECONDS = 90
 IDLE_CACHE_MAX_AGE_SECONDS = 300
 EMPTY_CACHE_MAX_AGE_SECONDS = 120
 FUTURE_LOOKAHEAD_DAYS = 3
-DEFAULT_DISPLAY_TIMEZONE_NAME = "America/New_York"
+DEFAULT_DISPLAY_TIMEZONE_NAME = "UTC"
 
 if ZoneInfo:
     try:
@@ -822,7 +822,7 @@ def get_sports_ticker_data(
         result = {
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "meta": {
-                "timezone": "America/New_York",
+                "timezone": "UTC",
                 "cache_age_seconds": 0,
                 "stale": False,
                 "favorites": favorite_teams,
@@ -856,7 +856,7 @@ def get_sports_ticker_data(
             error_payload = {
                 "updated_at": datetime.now(timezone.utc).isoformat(),
                 "meta": {
-                    "timezone": "America/New_York",
+                    "timezone": "UTC",
                     "cache_age_seconds": 0,
                     "stale": True,
                     "favorites": favorite_teams,
@@ -914,7 +914,7 @@ def transform_to_ticker_contract(sports_data: SportsData, favorite_teams: List[s
     return {
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "meta": {
-            "timezone": "America/New_York",
+            "timezone": "UTC",
             "cache_age_seconds": cache_age_seconds,
             "stale": cache_age_seconds > 120,  # Flag as stale if older than 2 minutes
             "favorites": favorite_teams,

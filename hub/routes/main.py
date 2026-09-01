@@ -139,7 +139,7 @@ def get_serialized_public_config(config):
     if media_config:
         public_config["media"] = {
             "enabled": media_config.get("enabled", True),
-            "launcher_endpoint": media_config.get("launcher_endpoint", "http://127.0.0.1:7666/v1/open_media"),
+            "launcher_endpoint": media_config.get("launcher_endpoint", ""),
             "allowed_domains": media_config.get("allowed_domains", []),
         }
 

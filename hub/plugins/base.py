@@ -1,5 +1,5 @@
 """
-Base classes and interfaces for the Kitchen Hub plugin system.
+Base classes and interfaces for the Family Hub plugin system.
 """
 
 from abc import ABC, abstractmethod

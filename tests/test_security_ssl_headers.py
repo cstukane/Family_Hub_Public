@@ -1,5 +1,5 @@
 """
-Test script for SSL/secure headers functionality in Kitchen Hub
+Test script for SSL/secure headers functionality in Family Hub
 """
 
 import os

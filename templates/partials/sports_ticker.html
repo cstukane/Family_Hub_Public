@@ -28,7 +28,7 @@
 
         <div class="ticker-games" role="feed" aria-label="Sports game updates">
             {% for game in sports_data.games %}
-            {% set start_dt = game.start_time | convert_to_timezone('America/New_York') if game.start_time else None %}
+            {% set start_dt = game.start_time | convert_to_timezone('UTC') if game.start_time else None %}
             <div class="ticker-game {{ 'live' if game.status == 'in_progress' else 'upcoming' if game.status == 'scheduled' else 'completed' }}"
                 role="article"
                 aria-label="{{ game.away_team.name }} vs {{ game.home_team.name }}, {{ game.status.title() }} {% if game.status == 'in_progress' %}{{ game.time_remaining or game.quarter or 'LIVE' }}{% elif start_dt %}at {{ start_dt.strftime('%I:%M %p') }}{% endif %}, Score: {{ game.away_team.name }} {{ game.away_score }} - {{ game.home_team.name }} {{ game.home_score }}">
