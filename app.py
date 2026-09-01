@@ -330,6 +330,11 @@ def create_app(config_path: str | None = None) -> Flask:
     app = Flask(__name__, instance_relative_config=True)
     if os.environ.get("PYTEST_CURRENT_TEST"):
         app.config["TESTING"] = True
+
+    _instance_path_override = os.environ.get("FAMILY_HUB_INSTANCE_PATH")
+    if _instance_path_override:
+        app.instance_path = os.path.abspath(_instance_path_override)
+
     configure_logging(app)
 
     # Load configuration. Real deployments keep their YAML in the ignored instance directory.

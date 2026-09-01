@@ -44,7 +44,7 @@ class PluginMarketplace:
 
     def __init__(self, plugin_manager: PluginManager, marketplace_url: str = None):
         self.plugin_manager = plugin_manager
-        self.marketplace_url = marketplace_url or "https://api.kitchenhub.example.com"  # Placeholder
+        self.marketplace_url = marketplace_url or "https://api.example.com"  # Placeholder
         self.cache_dir = os.path.join(os.path.dirname(__file__), "cache")
         os.makedirs(self.cache_dir, exist_ok=True)
 

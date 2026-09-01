@@ -106,7 +106,7 @@ if not exist "config.yaml" (
     echo     ics_url: "https://example.com/family.ics" >> config.yaml
     echo   weather: >> config.yaml
     echo     kind: "open_meteo" >> config.yaml
-    echo     location: { lat: 40.90, lon: -74.55 } >> config.yaml
+    echo     location: { lat: 0.0, lon: 0.0 } >> config.yaml
     echo. >> config.yaml
     echo features: >> config.yaml
     echo   voice: false >> config.yaml

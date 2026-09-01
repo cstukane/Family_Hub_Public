@@ -55,7 +55,7 @@ e2e = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/family-hub/public"
+Homepage = "https://github.com/cstukane/Family_Hub_Public"
 
 [tool.setuptools.packages.find]
 where = ["."]

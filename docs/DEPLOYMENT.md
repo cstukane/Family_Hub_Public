@@ -1,26 +1,53 @@
 # Deployment Guide
 
-This guide covers common deployment paths for Family Hub.
+This guide covers deployment paths for Family Hub.
 
-## Linux (production with systemd)
+## Windows (primary host)
+
+### Prereqs
+- Windows 10 or 11
+- Python 3.11+
+- Chrome or Chromium
+
+### Setup
+```cmd
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+mkdir instance 2>nul
+copy config.example.yaml instance\config.yaml
+copy .env.example instance\.env
+```
+
+### Run
+```cmd
+make run
+```
+
+Open http://localhost:5000 in Chrome. For kiosk mode, use Chrome's app mode or configure Windows to launch Family Hub on startup.
+
+### Runtime data location
+
+Family Hub stores mutable household data in the `instance/` directory next to the source tree during development. A packaged Windows installer will override this with a user-profile path; the application honors the `FAMILY_HUB_INSTANCE_PATH` environment variable when set.
+
+## Linux / Raspberry Pi (secondary / self-hosted)
 
 ### Prereqs
 - Python 3.11+
 - Chromium
-- nginx (optional, for HTTPS)
-- systemd
+- systemd (for autostart services)
 
 ### Install
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv chromium-browser nginx
+sudo apt install -y python3 python3-venv chromium-browser
 sudo git clone <repository-url> /opt/family-hub
 cd /opt/family-hub
 make venv
 make install
 ```
 
-### Configure the appliance
+### Configure
 ```bash
 mkdir -p instance
 cp config.example.yaml instance/config.yaml
@@ -51,7 +78,7 @@ make deploy-nginx
 sudo ./scripts/setup_ssl.sh your-domain.com your-email@example.com
 ```
 
-## Raspberry Pi (kiosk)
+## Raspberry Pi (kiosk, secondary)
 
 ### Prereqs
 - Raspberry Pi OS with desktop
@@ -77,29 +104,6 @@ make run
 ```bash
 ./scripts/start_kiosk.sh
 ```
-
-## Windows (development/test)
-
-### Prereqs
-- Python 3.11+
-- Chrome or Chromium
-
-### Setup
-```cmd
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-mkdir instance 2>nul
-copy config.example.yaml instance\config.yaml
-copy .env.example instance\.env
-```
-
-### Run
-```cmd
-make run
-```
-
-Open http://localhost:5000 in Chrome for kiosk testing.
 
 ## Health and validation
 

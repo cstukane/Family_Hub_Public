@@ -1,6 +1,6 @@
 # Family Hub
 
-A glanceable family command center for a kitchen TV or desktop display. Designed for always-on kiosk mode on a small PC, with secondary support for Raspberry Pi.
+A glanceable family command center for a kitchen TV or desktop display. Designed for always-on kiosk mode on a Windows PC, with secondary support for Raspberry Pi and Linux.
 
 The core loop: walk into the room → in ~3 seconds know what's next today, the weather, and scores → occasionally touch the screen to add a shopping item, set a timer, or open a useful web destination.
 
@@ -37,33 +37,47 @@ Nearly all layout, provider, and feature customization is through the untracked 
 ## Quick Start
 
 ### Prerequisites
+- Windows 10 or 11 (primary), or Linux / Raspberry Pi (secondary)
 - Python 3.11+
 - Chromium browser (optional, for kiosk mode)
 - make
 - Git
 
-### Development Setup
+### Development Setup (Windows — primary host)
 1. **Clone and setup environment:**
-    ```bash
+    ```cmd
     git clone <repository-url>
     cd family-hub
-    make venv
-    make install
+    python -m venv .venv
+    .venv\Scripts\activate
+    pip install -r requirements.txt
     ```
 
 2. **Configure your services:**
-    ```bash
-    mkdir -p instance
-    cp config.example.yaml instance/config.yaml
-    cp .env.example instance/.env
-    # Edit only these ignored local files
+    ```cmd
+    mkdir instance 2>nul
+    copy config.example.yaml instance\config.yaml
+    copy .env.example instance\.env
+    rem Edit only these ignored local files
     ```
 
 3. **Launch:**
-    ```bash
+    ```cmd
     make run
-    # Open http://localhost:5000
+    rem Open http://localhost:5000
     ```
+
+### Development Setup (Linux / Raspberry Pi — secondary)
+```bash
+git clone <repository-url> family-hub
+cd family-hub
+make venv
+make install
+mkdir -p instance
+cp config.example.yaml instance/config.yaml
+cp .env.example instance/.env
+make run
+```
 
 ## Google Calendar Setup
 
@@ -76,14 +90,37 @@ Google Calendar uses OAuth for authorization.
 
 ## Production Deployment
 
-### Prerequisites
+### Windows (primary)
+
+The normal Windows experience is a self-hosted local web app. No installer exists yet; run from source during Phase 1.
+
+1. **Setup environment:**
+    ```cmd
+    python -m venv .venv
+    .venv\Scripts\activate
+    pip install -r requirements.txt
+    mkdir instance 2>nul
+    copy config.example.yaml instance\config.yaml
+    copy .env.example instance\.env
+    ```
+
+2. **Launch:**
+    ```cmd
+    make run
+    ```
+
+3. **Kiosk mode:** Open http://localhost:5000 in Chrome and use Chrome's app mode for a dedicated window.
+
+### Linux / Raspberry Pi (secondary / self-hosted)
+
+#### Prerequisites
 - Debian/Ubuntu or Raspberry Pi OS
 - Python 3.11+, make
 - Chromium browser
 - systemd (for autostart services)
 - Git
 
-### Deployment Steps
+#### Deployment Steps
 1. **Install system packages and clone the repository:**
     ```bash
     sudo apt update && sudo apt install python3 python3-venv chromium-browser nginx
@@ -112,10 +149,10 @@ Google Calendar uses OAuth for authorization.
     sudo make deploy
     ```
 
-### Health Check
+#### Health Check
 - `GET /health` — application status, version info, and platform details
 
-### Managing Services
+#### Managing Services
 ```bash
 sudo systemctl status family-hub@$USER.service
 sudo systemctl status family-hub-kiosk@$USER.service
@@ -219,8 +256,10 @@ These exist in the codebase but are **not part of the active dashboard experienc
 These subsystems are **frozen** — no new investment, no README billing, first against the wall when they cause friction.
 
 ## Hardware Recommendations
-- Raspberry Pi 4+ with 4GB RAM (recommended for all features)
-- Small form-factor PC (Intel NUC, etc.) for enhanced performance
+
+- Windows 10/11 PC (primary host; any desktop or laptop capable of running Chrome)
+- Raspberry Pi 4+ with 4GB RAM (recommended for secondary Linux/Pi deployment)
+- Small form-factor PC (Intel NUC, etc.) for secondary Linux deployment
 - Any Linux device with Chromium support
 - Touchscreen monitor for optimal user experience
 
