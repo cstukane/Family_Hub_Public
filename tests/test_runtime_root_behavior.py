@@ -11,9 +11,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-for mod_name in list(sys.modules):
-    if mod_name == "hub" or mod_name.startswith("hub."):
-        del sys.modules[mod_name]
+# NOTE: Do NOT delete `hub` / `hub.*` from sys.modules here. Mutating
+# global module state at import time causes later tests (e.g. the
+# @patch decorators in tests/test_api_routes.py) to bind to a stale
+# module reference, breaking test isolation. The DIY import collision
+# concerns the top-level `app` name, not `hub`, and is handled below
+# by loading this repository's app.py under a private module name.
 
 from hub.utils.runtime import get_runtime_root  # noqa: E402
 
