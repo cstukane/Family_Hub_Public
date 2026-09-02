@@ -8,7 +8,6 @@ from typing import Any, Dict, List, Optional, Union
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
@@ -62,70 +61,68 @@ def _resolve_credentials_file(config: Optional[Dict[str, Any]]) -> Optional[str]
 
 def get_google_calendar_credentials(config: Dict[str, Any]) -> Optional[Credentials]:
     """
-    Get Google Calendar credentials using OAuth flow.
+    Get Google Calendar credentials non-interactively.
+
+    This function is the background/service path used by normal calendar
+    fetch/status/add/delete operations. It MUST NOT launch a browser or
+    spin up a local OAuth server. Interactive authentication is the
+    responsibility of the explicit ``/api/oauth/google`` setup flow.
+
+    Behavior:
+        * no/invalid ``config`` arg -> return ``None``
+        * no stored ``token.json``  -> return ``None``
+        * valid stored token        -> return credentials
+        * expired token with refresh token -> refresh and persist; on
+          ``RefreshError`` remove the invalid token file and return ``None``
 
     Args:
-        config: Google calendar configuration containing client_id, client_secret, and calendar_ids
+        config: Google calendar configuration (kept for signature parity
+            with prior callers; not consulted for interactive flows).
     Returns:
-        Google credentials object or None if authentication fails
+        Google ``Credentials`` object or ``None`` if authentication is
+        unavailable.
     """
     if not config:
         return None
 
-    creds = None
-
-    # Token file stores the user's access and refresh tokens
     token_path = os.path.join(get_runtime_root(), "token.json")
 
-    # Load existing token if available
-    if os.path.exists(token_path):
+    if not os.path.exists(token_path):
+        return None
+
+    try:
         creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+    except (ValueError, OSError):
+        # Malformed/empty/unreadable token file: treat as unauthenticated
+        # rather than triggering any interactive flow.
+        try:
+            os.remove(token_path)
+        except OSError:
+            pass
+        return None
 
-    # If there are no (valid) credentials available, let the user log in or refresh.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
+    if creds and creds.valid:
+        return creds
+
+    if creds and creds.expired and creds.refresh_token:
+        try:
+            creds.refresh(Request())
+        except RefreshError:
             try:
-                creds.refresh(Request())
-                with open(token_path, "w") as token:
-                    token.write(creds.to_json())
-            except RefreshError:
-                # If refresh fails, remove the token file and start fresh
                 os.remove(token_path)
-                creds = None
-        if not creds or not creds.valid:
-            flow = None
-
-            # Prefer an explicit credentials JSON (standard Google OAuth client secret)
-            credentials_path = _resolve_credentials_file(config)
-            if credentials_path:
-                try:
-                    flow = InstalledAppFlow.from_client_secrets_file(credentials_path, SCOPES)
-                except FileNotFoundError:
-                    # Should not happen because _resolve_credentials_file verifies existence, but guard anyway
-                    flow = None
-            # Fallback to legacy inline client config
-            if not flow and config and config.get("client_id") and config.get("client_secret"):
-                client_config = {
-                    "web": {
-                        "client_id": config["client_id"],
-                        "client_secret": config["client_secret"],
-                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                        "token_uri": "https://oauth2.googleapis.com/token",  # nosec B105
-                        "redirect_uris": ["urn:ietf:wg:oauth:2.0:oob", "http://localhost"],
-                    }
-                }
-                flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
-
-            if not flow:
-                return None
-
-            creds = flow.run_local_server(port=0)
-
-            # Save the credentials for the next run
+            except OSError:
+                pass
+            return None
+        try:
             with open(token_path, "w") as token:
                 token.write(creds.to_json())
+        except OSError:
+            logger.warning("Could not persist refreshed Google token to %s", token_path)
+        if creds.valid:
+            return creds
+        return None
 
-    return creds
+    return None
 
 
 def fetch_google_events(config: Dict[str, Any], range_start: datetime, range_end: datetime) -> List[CalendarEvent]:

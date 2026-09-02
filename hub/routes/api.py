@@ -15,6 +15,7 @@ from hub.services import calendar, media, notes, shopping, sports, timers, voice
 from hub.utils.auth import generate_media_launcher_token
 from hub.utils.config_helpers import get_config_dict
 from hub.utils.decorators import require_admin_rate_limit, require_default_rate_limit, require_ip_whitelist
+from hub.utils.runtime import get_runtime_root
 from hub.utils.validation import validate_request_json
 
 from . import api_bp
@@ -1664,9 +1665,10 @@ def google_calendar_auth_callback():
         # Exchange authorization code for access token
         flow.fetch_token(authorization_response=request.url)
 
-        # Save credentials to instance directory
+        # Save credentials under the resolved runtime root so the
+        # background calendar adapter path reads from the same location.
         credentials = flow.credentials
-        token_path = os.path.join(current_app.instance_path, "token.json")
+        token_path = os.path.join(get_runtime_root(), "token.json")
         with open(token_path, "w") as token:
             token.write(credentials.to_json())
 
