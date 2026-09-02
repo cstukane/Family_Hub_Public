@@ -8,6 +8,8 @@ from typing import Dict, List
 
 from flask import current_app
 
+from hub.utils.runtime import get_runtime_root
+
 
 def _safe_extract_tar(tar: tarfile.TarFile, target_dir: str) -> None:
     """Safely extract a tar archive, preventing tar-slip."""
@@ -33,8 +35,8 @@ def create_backup(backup_name: str = None) -> str:
         if not backup_name:
             backup_name = f"kitchen_hub_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.tar.gz"
 
-        # Define backup directory
-        backup_dir = os.path.join(current_app.instance_path, "backups")
+        runtime_root = get_runtime_root()
+        backup_dir = os.path.join(runtime_root, "backups")
         os.makedirs(backup_dir, exist_ok=True)
 
         backup_path = os.path.join(backup_dir, backup_name)
@@ -42,7 +44,7 @@ def create_backup(backup_name: str = None) -> str:
         # Get the paths to backup
         db_path = current_app.config.get("DATABASE")
         config_path = current_app.config.get("CONFIG_PATH", "config.yaml")
-        instance_dir = current_app.instance_path
+        instance_dir = runtime_root
 
         with tarfile.open(backup_path, "w:gz") as tar:
             # Add database file
@@ -72,7 +74,7 @@ def create_backup(backup_name: str = None) -> str:
 
 def list_backups() -> List[Dict[str, str]]:
     """List all available backups."""
-    backup_dir = os.path.join(current_app.instance_path, "backups")
+    backup_dir = os.path.join(get_runtime_root(), "backups")
 
     if not os.path.exists(backup_dir):
         return []
@@ -116,7 +118,8 @@ def restore_backup(backup_path: str) -> bool:
                 current_app.scheduler.shutdown()
 
         # Extract the backup to a temporary directory first
-        temp_dir = os.path.join(current_app.instance_path, "temp_restore")
+        runtime_root = get_runtime_root()
+        temp_dir = os.path.join(runtime_root, "temp_restore")
         os.makedirs(temp_dir, exist_ok=True)
 
         with tarfile.open(backup_path, "r:gz") as tar:
@@ -125,7 +128,7 @@ def restore_backup(backup_path: str) -> bool:
         # Get the paths to restore to
         db_path = current_app.config.get("DATABASE")
         config_path = current_app.config.get("CONFIG_PATH", "config.yaml")
-        instance_dir = current_app.instance_path
+        instance_dir = runtime_root
 
         # Restore database
         extracted_db_files = [f for f in os.listdir(temp_dir) if f.endswith(".db")]
@@ -178,7 +181,7 @@ def restore_backup(backup_path: str) -> bool:
 def delete_backup(backup_name: str) -> bool:
     """Delete a specific backup file."""
     try:
-        backup_dir = os.path.join(current_app.instance_path, "backups")
+        backup_dir = os.path.join(get_runtime_root(), "backups")
         backup_path = os.path.join(backup_dir, backup_name)
 
         if os.path.exists(backup_path):
@@ -196,7 +199,7 @@ def delete_backup(backup_name: str) -> bool:
 def get_backup_info(backup_name: str) -> Dict:
     """Get information about a specific backup."""
     try:
-        backup_dir = os.path.join(current_app.instance_path, "backups")
+        backup_dir = os.path.join(get_runtime_root(), "backups")
         backup_path = os.path.join(backup_dir, backup_name)
 
         if not os.path.exists(backup_path):

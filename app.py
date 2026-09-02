@@ -13,6 +13,8 @@ from flask_limiter.util import get_remote_address
 from flask_socketio import SocketIO
 from flask_talisman import Talisman
 
+from hub.utils.runtime import get_runtime_root
+
 
 def _ensure_datetime(value):
     """Convert supported value types into a datetime, if possible."""
@@ -321,7 +323,15 @@ def _prime_dashboard_caches(app: Flask) -> None:
 
 def _default_config_path() -> str:
     """Use the untracked deployment config, falling back to the safe example."""
-    return os.environ.get("FAMILY_HUB_CONFIG", "instance/config.yaml" if os.path.exists("instance/config.yaml") else "config.example.yaml")
+    config_env = os.environ.get("FAMILY_HUB_CONFIG")
+    if config_env:
+        return config_env
+
+    runtime_root = get_runtime_root()
+    candidate = os.path.join(runtime_root, "config.yaml")
+    if os.path.exists(candidate):
+        return candidate
+    return "config.example.yaml"
 
 
 def create_app(config_path: str | None = None) -> Flask:

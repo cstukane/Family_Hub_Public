@@ -15,6 +15,7 @@ from googleapiclient.errors import HttpError
 # Local imports intentionally after stdlib/third-party for clarity.
 from hub.cache import get_cache, set_cache
 from hub.models import CalendarEvent
+from hub.utils.runtime import get_runtime_root
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
@@ -35,7 +36,7 @@ def _resolve_credentials_file(config: Optional[Dict[str, Any]]) -> Optional[str]
 
     Tries, in order:
         1. Explicit path supplied in config under 'credentials_file'
-        2. An instance-scoped credentials.json (instance/credentials.json)
+        2. A runtime-root credentials.json
         3. A project-root credentials.json
     """
     candidate_paths: List[str] = []
@@ -44,8 +45,8 @@ def _resolve_credentials_file(config: Optional[Dict[str, Any]]) -> Optional[str]
         if credentials_file:
             candidate_paths.append(credentials_file)
 
-    # Default fallbacks
-    candidate_paths.extend([os.path.join("instance", "credentials.json"), "credentials.json"])
+    runtime_root = get_runtime_root()
+    candidate_paths.extend([os.path.join(runtime_root, "credentials.json"), "credentials.json"])
 
     for candidate in candidate_paths:
         if not candidate:
@@ -74,7 +75,7 @@ def get_google_calendar_credentials(config: Dict[str, Any]) -> Optional[Credenti
     creds = None
 
     # Token file stores the user's access and refresh tokens
-    token_path = os.path.join("instance", "token.json")
+    token_path = os.path.join(get_runtime_root(), "token.json")
 
     # Load existing token if available
     if os.path.exists(token_path):
