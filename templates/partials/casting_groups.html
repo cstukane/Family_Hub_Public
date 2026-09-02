@@ -1,0 +1,252 @@
+<div class="casting-groups-panel" id="casting-groups-panel">
+    <h3>Casting Groups</h3>
+    <div class="casting-groups-controls">
+        <div class="mb-3">
+            <label for="group-name" class="form-label">New Group Name</label>
+            <input type="text" class="form-control" id="group-name" placeholder="Enter group name">
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label">Select Devices</label>
+            <div id="device-selection-list">
+                <!-- Device checkboxes will be populated here -->
+            </div>
+        </div>
+        
+        <button class="btn btn-primary" onclick="createCastingGroup()">Create Group</button>
+        
+        <div id="casting-groups-list" class="mt-3">
+            <!-- Groups list will be populated here -->
+        </div>
+    </div>
+</div>
+
+<script>
+// Function to load all devices for group creation
+function loadDevicesForGroup() {
+    fetch('/api/casting/devices')
+        .then(response => response.json())
+        .then(devices => {
+            const container = document.getElementById('device-selection-list');
+            container.textContent = '';
+            if (devices && devices.length > 0) {
+                devices.forEach(device => {
+                    const deviceId = device.device_id || '';
+                    const deviceName = device.friendly_name || device.name || 'Unknown device';
+                    const deviceType = device.device_type || 'unknown';
+
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'form-check';
+
+                    const input = document.createElement('input');
+                    input.className = 'form-check-input';
+                    input.type = 'checkbox';
+                    input.value = deviceId;
+                    input.id = `device-${deviceId}`;
+                    input.name = 'selectedDevices';
+
+                    const label = document.createElement('label');
+                    label.className = 'form-check-label';
+                    label.setAttribute('for', input.id);
+                    label.textContent = `${deviceName} (${deviceType})`;
+
+                    wrapper.append(input, label);
+                    container.append(wrapper);
+                });
+            } else {
+                const empty = document.createElement('p');
+                empty.className = 'text-muted';
+                empty.textContent = 'No devices available. Discover devices first.';
+                container.append(empty);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching devices for group:', error);
+        });
+}
+
+// Function to create a new casting group
+function createCastingGroup() {
+    const groupName = document.getElementById('group-name').value;
+    if (!groupName) {
+        showMessage('Please enter a group name', 'error');
+        return;
+    }
+    
+    // Get selected devices
+    const selectedDevices = Array.from(document.querySelectorAll('input[name="selectedDevices"]:checked'))
+        .map(checkbox => checkbox.value);
+    
+    if (selectedDevices.length === 0) {
+        showMessage('Please select at least one device', 'error');
+        return;
+    }
+    
+    fetch('/api/casting/groups', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            name: groupName,
+            devices: selectedDevices
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showMessage(data.message, 'success');
+            document.getElementById('group-name').value = '';
+            refreshCastingGroups();
+        } else {
+            showMessage(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error creating group:', error);
+        showMessage('Error creating casting group', 'error');
+    });
+}
+
+// Function to refresh the groups list
+function refreshCastingGroups() {
+    fetch('/api/casting/groups')
+        .then(response => response.json())
+        .then(groups => {
+            const container = document.getElementById('casting-groups-list');
+            container.textContent = '';
+            if (groups && groups.length > 0) {
+                const groupContainer = document.createElement('div');
+                groupContainer.className = 'groups-container';
+
+                groups.forEach(group => {
+                    const groupId = group.id;
+                    const groupName = group.name || 'Unnamed group';
+                    const deviceCount = Array.isArray(group.devices) ? group.devices.length : 0;
+
+                    const card = document.createElement('div');
+                    card.className = 'card mb-2';
+
+                    const cardBody = document.createElement('div');
+                    cardBody.className = 'card-body';
+
+                    const title = document.createElement('h5');
+                    title.className = 'card-title';
+                    title.textContent = groupName;
+
+                    const cardText = document.createElement('p');
+                    cardText.className = 'card-text';
+                    cardText.textContent = `Devices: ${deviceCount} `;
+
+                    const playGroupButton = document.createElement('button');
+                    playGroupButton.className = 'btn btn-sm btn-primary ms-2';
+                    playGroupButton.textContent = 'Play on Group';
+                    playGroupButton.addEventListener('click', () => playMediaOnGroup(groupId));
+                    cardText.append(playGroupButton);
+
+                    const buttonGroup = document.createElement('div');
+                    buttonGroup.className = 'btn-group';
+                    buttonGroup.setAttribute('role', 'group');
+
+                    const playBtn = document.createElement('button');
+                    playBtn.className = 'btn btn-sm btn-outline-secondary';
+                    playBtn.textContent = 'Play';
+                    playBtn.addEventListener('click', () => controlGroup(groupId, 'play'));
+
+                    const pauseBtn = document.createElement('button');
+                    pauseBtn.className = 'btn btn-sm btn-outline-secondary';
+                    pauseBtn.textContent = 'Pause';
+                    pauseBtn.addEventListener('click', () => controlGroup(groupId, 'pause'));
+
+                    const stopBtn = document.createElement('button');
+                    stopBtn.className = 'btn btn-sm btn-outline-danger';
+                    stopBtn.textContent = 'Stop';
+                    stopBtn.addEventListener('click', () => controlGroup(groupId, 'stop'));
+
+                    buttonGroup.append(playBtn, pauseBtn, stopBtn);
+
+                    cardBody.append(title, cardText, buttonGroup);
+                    card.append(cardBody);
+                    groupContainer.append(card);
+                });
+
+                container.append(groupContainer);
+            } else {
+                const empty = document.createElement('p');
+                empty.className = 'text-muted';
+                empty.textContent = 'No casting groups created yet.';
+                container.append(empty);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching casting groups:', error);
+        });
+}
+
+// Function to play media on a group (multi-room audio)
+function playMediaOnGroup(groupId) {
+    fetch(`/api/casting/groups/${groupId}/play`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            media_url: getCurrentMediaUrl() // This would be the media URL to play
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showMessage(data.message, 'success');
+        } else {
+            showMessage(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error playing media on group:', error);
+        showMessage('Error playing media on group', 'error');
+    });
+}
+
+// Function to control a group
+function controlGroup(groupId, action) {
+    // For now, we'll just show a message - in a real implementation, this would send
+    // commands to all devices in the group
+    showMessage(`${action.charAt(0).toUpperCase() + action.slice(1)} command sent to group`, 'info');
+}
+
+// Function to get the current media URL
+function getCurrentMediaUrl() {
+    // In a real implementation, this would get the URL from the media iframe
+    // For now, we'll return a placeholder
+    return window.currentMediaUrl || 'https://example.com/sample.mp4';
+}
+
+// Function to show messages
+function showMessage(message, type) {
+    // Create a temporary message element
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type === 'info' ? 'info' : 'success'} alert-dismissible fade show`;
+    const messageSpan = document.createElement('span');
+    messageSpan.textContent = message;
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'btn-close';
+    closeButton.setAttribute('data-bs-dismiss', 'alert');
+    alertDiv.append(messageSpan, closeButton);
+    
+    // Add to the top of the casting groups panel
+    document.getElementById('casting-groups-panel').prepend(alertDiv);
+    
+    // Remove after a few seconds
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+
+// Initial load of device list for group creation and groups list
+document.addEventListener('DOMContentLoaded', function() {
+    loadDevicesForGroup();
+    refreshCastingGroups();
+});
+</script>

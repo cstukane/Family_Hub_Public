@@ -1,0 +1,343 @@
+<div class="webhook-management">
+  <h3>Webhook Management</h3>
+  
+  <div class="webhook-list">
+    <h4>Configured Webhooks</h4>
+    <div id="webhooks-container" hx-get="/api/webhooks" hx-trigger="load, webhook-updated from:body" hx-swap="innerHTML">
+      <p>Loading webhooks...</p>
+    </div>
+    
+    <button id="add-webhook-btn" class="btn btn-primary" onclick="showAddWebhookForm()">Add Webhook</button>
+  </div>
+  
+  <div id="webhook-form-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span class="close" onclick="closeWebhookForm()">&times;</span>
+      <h4 id="webhook-form-title">Add Webhook</h4>
+      <form id="webhook-form">
+        <div class="form-group">
+          <label for="webhook-name">Name:</label>
+          <input type="text" id="webhook-name" name="name" required class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label for="webhook-url">URL:</label>
+          <input type="url" id="webhook-url" name="url" required class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label for="webhook-event-types">Event Types:</label>
+          <select id="webhook-event-types" name="event_types" multiple class="form-control">
+            <option value="weather_alert" selected>Weather Alert</option>
+            <option value="severe_weather">Severe Weather</option>
+            <option value="calendar_event">Calendar Event</option>
+            <option value="shopping_update">Shopping Update</option>
+            <option value="note_update">Note Update</option>
+            <option value="timer_expired">Timer Expired</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="webhook-secret">Secret (for signing):</label>
+          <input type="password" id="webhook-secret" name="secret" class="form-control" placeholder="Optional">
+        </div>
+        
+        <div class="form-group">
+          <label for="webhook-active">Active:</label>
+          <input type="checkbox" id="webhook-active" name="active" checked>
+        </div>
+        
+        <div class="form-group">
+          <label for="webhook-headers">Custom Headers (JSON):</label>
+          <textarea id="webhook-headers" name="headers" class="form-control" placeholder='{"Authorization": "Bearer token"}'></textarea>
+        </div>
+        
+        <input type="hidden" id="webhook-id" name="id">
+        <button type="submit" class="btn btn-primary">Save Webhook</button>
+        <button type="button" class="btn btn-secondary" onclick="closeWebhookForm()">Cancel</button>
+      </form>
+    </div>
+  </div>
+  
+  <div id="webhook-logs" style="margin-top: 20px;">
+    <h4>Recent Webhook Executions</h4>
+    <div id="logs-container" hx-get="/api/webhooks/logs" hx-trigger="load, webhook-updated from:body" hx-swap="innerHTML">
+      <p>Loading logs...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showAddWebhookForm() {
+    document.getElementById('webhook-form-title').textContent = 'Add Webhook';
+    document.getElementById('webhook-form').reset();
+    document.getElementById('webhook-id').value = '';
+    document.getElementById('webhook-active').checked = true;
+    document.getElementById('webhook-form-modal').style.display = 'block';
+  }
+
+  function showEditWebhookForm(webhookId) {
+    document.getElementById('webhook-form-title').textContent = 'Edit Webhook';
+    document.getElementById('webhook-form').reset();
+    
+    // Fetch webhook data and populate form
+    fetch(`/api/webhooks/${webhookId}`)
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('webhook-name').value = data.name;
+        document.getElementById('webhook-url').value = data.url;
+        document.getElementById('webhook-id').value = data.id;
+        document.getElementById('webhook-active').checked = data.active;
+        
+        // Set event types (multi-select)
+        const eventTypesSelect = document.getElementById('webhook-event-types');
+        Array.from(eventTypesSelect.options).forEach(option => {
+          option.selected = data.event_types.includes(option.value);
+        });
+        
+        // Set headers if they exist
+        if (data.headers && Object.keys(data.headers).length > 0) {
+          document.getElementById('webhook-headers').value = JSON.stringify(data.headers, null, 2);
+        }
+        
+        document.getElementById('webhook-form-modal').style.display = 'block';
+      })
+      .catch(error => {
+        alert('Error fetching webhook data: ' + error);
+      });
+  }
+
+  function closeWebhookForm() {
+    document.getElementById('webhook-form-modal').style.display = 'none';
+  }
+
+  function deleteWebhook(webhookId) {
+    if (confirm('Are you sure you want to delete this webhook?')) {
+      fetch(`/api/webhooks/${webhookId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      .then(response => {
+        if (response.ok) {
+          document.dispatchEvent(new CustomEvent('webhook-updated'));
+          alert('Webhook deleted successfully');
+        } else {
+          alert('Error deleting webhook');
+        }
+      })
+      .catch(error => {
+        alert('Error deleting webhook: ' + error);
+      });
+    }
+  }
+
+  function testWebhook(webhookId) {
+    fetch(`/api/webhooks/${webhookId}/test`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      alert(`Test result: ${data.success ? 'Success' : 'Failed'} - ${data.message}`);
+    })
+    .catch(error => {
+      alert('Error testing webhook: ' + error);
+    });
+  }
+
+  function triggerWebhookNow(webhookId) {
+    fetch(`/api/webhooks/${webhookId}/trigger`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        payload: {
+          event_type: 'manual_test',
+          timestamp: new Date().toISOString(),
+          data: { message: 'Manual test trigger' }
+        }
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      alert(`Webhook triggered: ${data.status}`);
+    })
+    .catch(error => {
+      alert('Error triggering webhook: ' + error);
+    });
+  }
+
+  // Handle form submission
+  document.getElementById('webhook-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const webhookData = {
+      name: formData.get('name'),
+      url: formData.get('url'),
+      event_types: Array.from(document.getElementById('webhook-event-types').selectedOptions).map(option => option.value),
+      active: document.getElementById('webhook-active').checked,
+      secret: formData.get('secret'),
+      headers: {}
+    };
+    
+    // Parse headers if provided
+    const headersText = document.getElementById('webhook-headers').value.trim();
+    if (headersText) {
+      try {
+        webhookData.headers = JSON.parse(headersText);
+      } catch (e) {
+        alert('Invalid JSON in headers: ' + e.message);
+        return;
+      }
+    }
+    
+    const webhookId = formData.get('id');
+    const url = webhookId ? `/api/webhooks/${webhookId}` : '/api/webhooks';
+    const method = webhookId ? 'PUT' : 'POST';
+    
+    fetch(url, {
+      method: method,
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(webhookData)
+    })
+    .then(response => {
+      if (response.ok) {
+        closeWebhookForm();
+        document.dispatchEvent(new CustomEvent('webhook-updated'));
+        alert(webhookId ? 'Webhook updated successfully' : 'Webhook created successfully');
+      } else {
+        alert('Error saving webhook');
+      }
+    })
+    .catch(error => {
+      alert('Error saving webhook: ' + error);
+    });
+  });
+
+  // Close modal when clicking outside of it
+  window.onclick = function(event) {
+    const modal = document.getElementById('webhook-form-modal');
+    if (event.target === modal) {
+      closeWebhookForm();
+    }
+  }
+</script>
+
+<style>
+  .webhook-management {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .webhook-list {
+    margin-bottom: 20px;
+  }
+  
+  .webhook-item {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+  }
+  
+  .webhook-item.active {
+    border-left: 4px solid #28a745;
+  }
+  
+  .webhook-item.inactive {
+    border-left: 4px solid #dc3545;
+  }
+  
+  .webhook-actions {
+    margin-top: 10px;
+  }
+  
+  .webhook-actions button {
+    margin-right: 5px;
+    margin-bottom: 5px;
+  }
+  
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+  }
+  
+  .modal-content {
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 60%;
+    border-radius: 5px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  
+  .close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  
+  .close:hover,
+  .close:focus {
+    color: black;
+  }
+  
+  .form-group {
+    margin-bottom: 15px;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+  
+  .form-control {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+  
+  .log-item {
+    border: 1px solid #eee;
+    padding: 8px;
+    margin-bottom: 5px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 0.9em;
+  }
+  
+  .log-success {
+    border-left: 3px solid #28a745;
+  }
+  
+  .log-error {
+    border-left: 3px solid #dc3545;
+  }
+  
+  .log-timeout {
+    border-left: 3px solid #ffc107;
+  }
+</style>

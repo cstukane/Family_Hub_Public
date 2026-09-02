@@ -1,0 +1,33 @@
+{% set commute_config = config.commute if config and config.commute is not none else {} %}
+{% set morning_window = commute_config.morning_window or {"start": "06:00", "end": "09:00"} %}
+{% set evening_window = commute_config.evening_window or {"start": "16:30", "end": "18:30"} %}
+
+<div
+    id="commute-tile"
+    class="panel commute-tile"
+    data-morning-start="{{ morning_window.start or '06:00' }}"
+    data-morning-end="{{ morning_window.end or '09:00' }}"
+    data-evening-start="{{ evening_window.start or '16:30' }}"
+    data-evening-end="{{ evening_window.end or '18:30' }}"
+    data-refresh-minutes="{{ commute_config.refresh_minutes or 5 }}"
+    data-enabled="{{ 'true' if commute_config.enabled is not defined or commute_config.enabled else 'false' }}"
+    data-always-visible="{{ 'true' if commute_config.always_visible else 'false' }}"
+    data-active="false"
+    aria-live="polite"
+>
+    <div class="commute-tile-row">
+        <span class="commute-route" data-role="commute-window">Hidden until commute hours</span>
+        <span class="commute-eta-large">
+            <span data-role="commute-eta">--</span><span class="commute-eta-unit">min</span>
+        </span>
+    </div>
+    <div class="commute-traffic-line">
+        <span class="commute-status-pill" data-role="commute-status" data-status="unknown">--</span>
+        <span data-role="commute-delta">Waiting for traffic...</span>
+    </div>
+    <div class="commute-incident" data-role="commute-incident" hidden></div>
+    <div class="commute-progress-bar">
+        <div class="commute-progress-fill" data-role="commute-progress-fill" data-status="unknown"></div>
+    </div>
+    <div class="commute-tile-footer" data-role="commute-updated">Not updated yet</div>
+</div>

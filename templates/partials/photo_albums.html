@@ -1,0 +1,30 @@
+<div class="panel" role="region" aria-labelledby="photo-albums-title">
+    <div class="panel-header" role="heading" aria-level="2" id="photo-albums-title">
+        <h2 class="panel-title">Photo Albums</h2>
+    </div>
+    
+    <div class="album-grid" role="main">
+        <div class="album" role="article" aria-label="Sample Album">
+            <a href="#" hx-get="/view/photos?album=sample" hx-target="#main-content" hx-swap="innerHTML">
+                <img src="/static/img/placeholder-album.png" alt="Sample Album" style="width: 100%; height: 150px; object-fit: cover;">
+                <h3>Sample Album</h3>
+                <p>50 photos</p>
+            </a>
+        </div>
+    </div>
+    
+    <div class="create-album" role="form" aria-label="Create new album">
+        <h3>Create New Album</h3>
+        <form hx-post="/api/albums" hx-target="#photo-albums-container" hx-swap="outerHTML">
+            <div class="form-group">
+                <label for="album-name">Album Name</label>
+                <input type="text" id="album-name" name="name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="album-description">Description (optional)</label>
+                <textarea id="album-description" name="description" class="form-control"></textarea>
+            </div>
+            <button type="submit" class="btn">Create Album</button>
+        </form>
+    </div>
+</div>

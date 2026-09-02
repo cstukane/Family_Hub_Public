@@ -1,0 +1,238 @@
+<div class="panel calendar-fragment" role="region" aria-labelledby="calendar-panel-title">
+    <div class="calendar-panel-header" role="heading" aria-level="2" id="calendar-panel-title">
+        <div class="section-header calendar-header-bar">
+            {% set base_query = '?view=' ~ view_mode %}
+            {% if view_mode == 'month' %}
+            {% set prev_link = '/partials/calendar/week' ~ base_query ~ '&month_offset=' ~ nav_previous %}
+            {% set today_link = '/partials/calendar/week' ~ base_query %}
+            {% set next_link = '/partials/calendar/week' ~ base_query ~ '&month_offset=' ~ nav_next %}
+            {% else %}
+            {% set prev_link = '/partials/calendar/week' ~ base_query ~ '&offset=' ~ nav_previous %}
+            {% set today_link = '/partials/calendar/week' ~ base_query %}
+            {% set next_link = '/partials/calendar/week' ~ base_query ~ '&offset=' ~ nav_next %}
+            {% endif %}
+            <div class="calendar-header-left">
+                <div class="calendar-navigation" aria-label="Calendar navigation">
+                    <button class="btn calendar-nav-arrow" hx-get="{{ prev_link }}" hx-target="#calendar-container" hx-swap="innerHTML"
+                        aria-label="Previous range" title="Previous range">
+                        <span aria-hidden="true">&#8249;</span>
+                    </button>
+                    <span class="date-range calendar-title panel-title">{{ month_year_label | default(range_label) }}</span>
+                    <button class="btn calendar-nav-arrow" hx-get="{{ next_link }}" hx-target="#calendar-container" hx-swap="innerHTML"
+                        aria-label="Next range" title="Next range">
+                        <span aria-hidden="true">&#8250;</span>
+                    </button>
+                    <button class="btn calendar-nav-today" hx-get="{{ today_link }}" hx-target="#calendar-container" hx-swap="innerHTML"
+                        aria-label="Jump to current period" title="Today">
+                        Today
+                    </button>
+                </div>
+            </div>
+            <div class="calendar-actions">
+                <div class="calendar-view-toggle" role="group" aria-label="Select calendar view">
+                    <button class="btn {% if view_mode in ('week', 'workweek') %}is-active{% endif %}"
+                        hx-get="/partials/calendar/week?view=week" hx-target="#calendar-container" hx-swap="innerHTML"
+                        aria-pressed="{{ 'true' if view_mode in ('week', 'workweek') else 'false' }}">
+                        Week
+                    </button>
+                    <button class="btn {% if view_mode == 'month' %}is-active{% endif %}"
+                        hx-get="/partials/calendar/week?view=month" hx-target="#calendar-container" hx-swap="innerHTML"
+                        aria-pressed="{{ 'true' if view_mode == 'month' else 'false' }}">
+                        Month
+                    </button>
+                </div>
+                <button class="btn" id="add-event-btn"
+                    onclick="loadAndShowModal('/partials/calendar/add-event-modal')"
+                    title="Add Event" aria-label="Add Event">
+                    +
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add event modal placeholder -->
+    <div id="modals"></div>
+
+    {% if view_mode in ('week', 'workweek') and time_grid %}
+    {% set grid_hours = time_grid.grid_end_hour - time_grid.grid_start_hour %}
+    <div class="calendar-time-grid-wrapper" role="grid" aria-label="{{ aria_label }}"
+        style="--calendar-columns: {{ headers|length }};">
+
+        {% if time_grid.all_day_rows %}
+        <div class="calendar-allday-row" style="--all-day-rows: {{ time_grid.all_day_row_count }};">
+            <div class="calendar-grid-corner" aria-hidden="true"></div>
+            <div class="calendar-allday-track">
+            {% for item in time_grid.all_day_rows %}
+                <div class="calendar-allday-bar {{ 'has-owner' if item.owner_color else '' }}"
+                    style="grid-column: {{ item.start_col + 1 }} / span {{ item.span_cols }}; grid-row: {{ item.row_index + 1 }}; {{ '--owner-color: ' ~ item.owner_color ~ ';' if item.owner_color else '' }}"
+                    title="{{ item.event.title }}">{{ item.event.title }}</div>
+            {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="calendar-day-headers">
+            <div class="calendar-grid-corner" aria-hidden="true"></div>
+            {% for header in headers %}
+            {% set header_day = time_grid.days[loop.index0] %}
+            <div class="calendar-day-header" role="columnheader" aria-label="{{ header }}">
+                <span class="calendar-day-header-name">{{ header[:3] }}</span>
+                <span class="calendar-day-header-num {% if header_day.is_today %}current-day-indicator{% endif %}">
+                    {{ header_day.date.day }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="calendar-time-grid" style="--grid-hours: {{ grid_hours }};">
+            <div class="calendar-hour-col">
+                {% for label in time_grid.hour_labels[:-1] %}
+                <div class="calendar-hour-label">{{ label }}</div>
+                {% endfor %}
+                {% if time_grid.hour_labels %}
+                <div class="calendar-hour-label calendar-hour-label-end">{{ time_grid.hour_labels[-1] }}</div>
+                {% endif %}
+            </div>
+            {% for day in time_grid.days %}
+            <div class="calendar-day-col {% if day.is_today %}current-day{% endif %}" role="gridcell"
+                aria-label="{{ day.date.strftime('%A, %B %d, %Y') }} {% if day.is_today %}Today's date{% endif %}">
+                {% for _ in range(time_grid.grid_row_count) %}
+                <div class="calendar-hour-row" aria-hidden="true"></div>
+                {% endfor %}
+
+                {% for item in day.timed_events %}
+                {% set ev = item.event %}
+                {% set ev_owner = ev.owner | string if ev.owner else '' %}
+                {% set event_time = ev.starts_at | convert_to_timezone | time_12hour if ev.starts_at else '' %}
+                {% set end_time = ev.ends_at | convert_to_timezone | time_12hour if ev.ends_at else '' %}
+                {% set guests_display = ev.guests | join(', ') if ev.guests else '' %}
+                {% set reminders_display = ev.reminders | join(', ') if ev.reminders else '' %}
+                {% set aria_label = ev.title ~ (' at ' ~ event_time if event_time else '') %}
+                {% if ev.owner %}{% set aria_label = aria_label ~ ' (Owner: ' ~ ev.owner ~ ')' %}{% endif %}
+                {% if ev.location %}{% set aria_label = aria_label ~ ' at ' ~ ev.location %}{% endif %}
+                <div class="calendar-event-block-wrapper" role="listitem"
+                    style="top: {{ item.top_pct }}%; height: {{ item.height_pct }}%; left: {{ item.left_pct }}%; width: {{ item.width_pct }}%;">
+                    <button type="button" class="event-chip calendar-event-block {{ item.size_class }} {{ 'has-owner' if item.owner_color else '' }}"
+                        style="{{ '--owner-color: ' ~ item.owner_color ~ ';' if item.owner_color else '' }}"
+                        aria-label="{{ aria_label }}" title="{{ aria_label }}"
+                        data-event-title="{{ ev.title | e }}"
+                        data-event-id="{{ ev.id | default('') | e }}"
+                        data-event-date="{{ day.date.strftime('%B %d, %Y') }}"
+                        data-event-time="{{ event_time | e }}"
+                        data-event-end-time="{{ end_time | e }}"
+                        data-event-all-day="false"
+                        data-event-location="{{ ev.location | default('') | e }}"
+                        data-event-description="{{ ev.description | default('') | e }}"
+                        data-event-owner="{{ ev_owner | e }}"
+                        data-event-guests="{{ guests_display | e }}"
+                        data-event-reminders="{{ reminders_display | e }}"
+                        data-event-source="{{ ev.source | default('') | e }}"
+                        data-event-calendar-id="{{ ev.calendar_id | default('') | e }}"
+                        data-event-visibility="{{ ev.visibility | default('') | e }}"
+                        data-event-color="{{ ev.color | default('') | e }}"
+                        data-event-size="{{ item.size_class }}">
+                        <span class="calendar-event-block-title">{{ ev.title }}</span>
+                        <span class="calendar-event-block-time">{{ event_time }}</span>
+                    </button>
+                </div>
+                {% endfor %}
+
+                {% if loop.index0 == time_grid.now_day_index and time_grid.now_top_pct is not none %}
+                <div class="calendar-now-line" style="top: {{ time_grid.now_top_pct }}%;" aria-hidden="true">
+                    <span class="calendar-now-dot"></span>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+
+    {% set week_rows = (date_cells|length // headers|length) %}
+    <div class="calendar-grid" role="grid" aria-label="{{ aria_label }}" data-view="{{ view_mode }}"
+        style="{{ '--calendar-columns: ' ~ (headers|length) ~ '; --calendar-rows: ' ~ week_rows ~ ';' }}">
+        {% for header in headers %}
+        <div class="calendar-day-header" role="columnheader" aria-label="{{ header }}">{{ header }}</div>
+        {% endfor %}
+
+        {% for day_date in date_cells %}
+        {% set is_today = (day_date == current_date) %}
+        {% set outside_month = month_reference and day_date.month != month_reference.month %}
+        <div class="calendar-day {% if is_today %}current-day{% endif %} {% if outside_month %}is-outside-month{% endif %}"
+            role="gridcell"
+            aria-label="{{ day_date.strftime('%A, %B %d, %Y') }} {% if is_today %}Today's date{% endif %}">
+            <div class="day-number {% if is_today %}current-day-indicator{% endif %}"
+                aria-label="Day {{ day_date.day }}">{{ day_date.day }}</div>
+            <div class="day-events" role="list" aria-label="Events for {{ day_date.strftime('%B %d, %Y') }}">
+                {% set day_events = group_events_by_date(events, day_date) %}
+                {% set display_limit = 1 if view_mode == 'month' else 3 %}
+                {% for event in day_events[:display_limit] %}
+                {% set ns = namespace(owner_color=None) %}
+                {% set ev_owner = event.owner | string if event.owner else '' %}
+                {% if config and config.family %}
+                {% for member in config.family %}
+                {% if member.name == ev_owner or (ev_owner and member.emails and ev_owner in member.emails) %}
+                {% set ns.owner_color = member.color %}
+                {% endif %}
+                {% endfor %}
+                {% endif %}
+                {% set owner_color = ns.owner_color %}
+
+                {% set event_time = event.starts_at | convert_to_timezone | time_12hour if event.starts_at else '' %}
+                {% set end_time = event.ends_at | convert_to_timezone | time_12hour if event.ends_at else '' %}
+                {% set guests_display = event.guests | join(', ') if event.guests else '' %}
+                {% set reminders_display = event.reminders | join(', ') if event.reminders else '' %}
+                {% set aria_label = event.title ~ (' at ' ~ event_time if event_time else '') %}
+                {% if event.owner %}{% set aria_label = aria_label ~ ' (Owner: ' ~ event.owner ~ ')' %}{% endif %}
+                {% if event.location %}{% set aria_label = aria_label ~ ' at ' ~ event.location %}{% endif %}
+
+                <div class="event-chip-wrapper" role="listitem" aria-label="{{ aria_label }}">
+                    <button type="button" class="event-chip {{ 'has-owner' if owner_color else '' }}"
+                        style="{{ '--owner-color: ' ~ owner_color ~ ';' if owner_color else '' }}"
+                        aria-label="{{ aria_label }}" title="{{ aria_label }}"
+                        data-event-title="{{ event.title | e }}"
+                        data-event-id="{{ event.id | default('') | e }}"
+                        data-event-date="{{ day_date.strftime('%B %d, %Y') }}"
+                        data-event-time="{{ event_time | e }}"
+                        data-event-end-time="{{ end_time | e }}"
+                        data-event-all-day="{{ 'true' if event.all_day else 'false' }}"
+                        data-event-location="{{ event.location | default('') | e }}"
+                        data-event-description="{{ event.description | default('') | e }}"
+                        data-event-owner="{{ ev_owner | e }}"
+                        data-event-guests="{{ guests_display | e }}"
+                        data-event-reminders="{{ reminders_display | e }}"
+                        data-event-source="{{ event.source | default('') | e }}"
+                        data-event-calendar-id="{{ event.calendar_id | default('') | e }}"
+                        data-event-visibility="{{ event.visibility | default('') | e }}"
+                        data-event-color="{{ event.color | default('') | e }}">
+                        <div class="event-time-title">
+                            <span class="event-time">{{ event_time }}</span>
+                            <span class="event-title">{{ event.title }}</span>
+                        </div>
+                        {% if event.location %}
+                        <div class="event-location">{{ event.location }}</div>
+                        {% endif %}
+                    </button>
+                </div>
+                {% endfor %}
+
+                {% if day_events|length > display_limit %}
+                {% set more_count = day_events|length - display_limit %}
+                <button class="more-events" type="button" data-date="{{ day_date.strftime('%Y-%m-%d') }}"
+                    onclick="loadAndShowModal('/partials/calendar/day-events?date=' + this.getAttribute('data-date'))"
+                    aria-label="+{{ more_count }} more events">
+                    +{{ more_count }} more
+                </button>
+                {% endif %}
+
+                {% if day_events|length == 0 %}
+                <div class="no-events" role="listitem" aria-label="No events for {{ day_date.strftime('%B %d, %Y') }}">
+                    No events</div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</div>

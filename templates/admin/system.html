@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ config.ui.theme if config and config.ui.theme else 'auto' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin System Info - Family Hub</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <script src="https://unpkg.com/htmx.org@1.8.4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .admin-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            grid-template-rows: auto 1fr;
+            min-height: 100vh;
+        }
+        
+        .admin-sidebar {
+            grid-column: 1 / 2;
+            grid-row: 2 / 3;
+            background-color: var(--surface-color);
+            border-right: 1px solid var(--border-color);
+            padding: 1rem;
+        }
+        
+        .admin-content {
+            grid-column: 2 / 3;
+            grid-row: 2 / 3;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        
+        .admin-header {
+            grid-column: 1 / -1;
+            grid-row: 1 / 2;
+            background-color: var(--surface-color);
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .admin-nav {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .admin-nav li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .admin-nav a {
+            display: block;
+            padding: 0.75rem;
+            text-decoration: none;
+            color: var(--text-color);
+            border-radius: var(--border-radius);
+            transition: background-color 0.2s;
+        }
+        
+        .admin-nav a:hover {
+            background-color: color-mix(in srgb, var(--primary-color) 20%, transparent);
+        }
+        
+        .admin-nav a.active {
+            background-color: color-mix(in srgb, var(--primary-color) 30%, transparent);
+        }
+        
+        .admin-logout {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .admin-panel-title {
+            margin-bottom: 1.5rem;
+            color: var(--text-color);
+        }
+        
+        .admin-card {
+            background: var(--background-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+        
+        .admin-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .admin-card-title {
+            margin: 0;
+            font-size: var(--font-size-large);
+        }
+        
+        .system-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .system-info-item {
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background-color: var(--surface-color);
+        }
+        
+        .system-info-item h4 {
+            margin-top: 0;
+            color: var(--text-color);
+        }
+        
+        .info-value {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .info-label {
+            color: var(--text-color);
+            opacity: 0.8;
+        }
+        
+        .chart-container {
+            height: 300px;
+            margin: 2rem 0;
+        }
+        
+        .admin-btn {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: var(--border-radius);
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .admin-btn:hover {
+            opacity: 0.9;
+        }
+        
+        .admin-btn-danger {
+            background-color: var(--error-color);
+        }
+        
+        .admin-btn-success {
+            background-color: var(--success-color);
+        }
+        
+        .admin-btn-warning {
+            background-color: var(--warning-color);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        
+        .status-good {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .status-warning {
+            background-color: var(--warning-color);
+            color: white;
+        }
+        
+        .status-error {
+            background-color: var(--error-color);
+            color: white;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-color);
+        }
+        
+        .refresh-btn {
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Admin header -->
+        <header class="admin-header">
+            <h1>Family Hub Admin Panel</h1>
+            <button id="logoutBtn" class="admin-btn admin-btn-danger">Logout</button>
+        </header>
+        
+        <!-- Admin sidebar -->
+        <aside class="admin-sidebar">
+            <ul class="admin-nav">
+                <li><a href="/admin">Dashboard</a></li>
+                <li><a href="/admin/config">Configuration</a></li>
+                <li><a href="/admin/system" class="active">System Info</a></li>
+                <li><a href="/admin/diagnostics">Diagnostics</a></li>
+                <li><a href="/admin/backup">Backups</a></li>
+                <li><a href="/admin/updates">Updates</a></li>
+                <li><a href="/">← Back to Dashboard</a></li>
+            </ul>
+            
+            <div class="admin-logout">
+                <button id="logoutBtnSidebar" class="admin-btn admin-btn-danger btn-block">Logout</button>
+            </div>
+        </aside>
+        
+        <!-- Admin content -->
+        <main class="admin-content">
+            <h2 class="admin-panel-title">System Information</h2>
+            
+            <button id="refreshSystemInfo" class="admin-btn admin-btn-warning refresh-btn">Refresh System Info</button>
+            
+            <!-- Application Info -->
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h3 class="admin-card-title">Application Information</h3>
+                </div>
+                <div class="system-info-grid" id="appInfo">
+                    <div class="loading">Loading application info...</div>
+                </div>
+            </div>
+            
+            <!-- System Resources -->
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h3 class="admin-card-title">System Resources</h3>
+                </div>
+                <div class="system-info-grid" id="systemResources">
+                    <div class="loading">Loading system resources...</div>
+                </div>
+            </div>
+            
+            <!-- Runtime Info -->
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h3 class="admin-card-title">Runtime Information</h3>
+                </div>
+                <div class="system-info-grid" id="runtimeInfo">
+                    <div class="loading">Loading runtime info...</div>
+                </div>
+            </div>
+            
+            <!-- Resource Charts -->
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h3 class="admin-card-title">Resource Usage Charts</h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="resourceChart"></canvas>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        // Logout functionality
+        function logout() {
+            fetch('/api/admin/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                window.location.href = '/admin/login';
+            })
+            .catch(error => {
+                console.error('Logout error:', error);
+                window.location.href = '/admin/login';
+            });
+        }
+        
+        // Add event listeners to logout buttons
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+        document.getElementById('logoutBtnSidebar').addEventListener('click', logout);
+        
+        // Refresh system info
+        document.getElementById('refreshSystemInfo').addEventListener('click', function() {
+            loadSystemInfo();
+        });
+        
+        // Load system info
+        function loadSystemInfo() {
+            fetch('/api/admin/system')
+                .then(response => response.json())
+                .then(data => {
+                    displaySystemInfo(data);
+                    createResourceChart(data);
+                })
+                .catch(error => {
+                    console.error('Load system info error:', error);
+                    document.getElementById('appInfo').innerHTML = '<p class="alert alert-error">Error loading system info: ' + error + '</p>';
+                    document.getElementById('systemResources').innerHTML = '';
+                    document.getElementById('runtimeInfo').innerHTML = '';
+                });
+        }
+        
+        // Display system info
+        function displaySystemInfo(data) {
+            // Application info
+            if (data.application) {
+                document.getElementById('appInfo').innerHTML = `
+                    <div class="system-info-item">
+                        <h4>Application</h4>
+                        <p><span class="info-label">Name:</span> <span class="info-value">${data.application.name}</span></p>
+                        <p><span class="info-label">Version:</span> <span class="info-value">${data.application.version}</span></p>
+                        <p><span class="info-label">Environment:</span> <span class="info-value">${data.application.environment}</span></p>
+                    </div>
+                `;
+            }
+            
+            // System resources info
+            if (data.system) {
+                document.getElementById('systemResources').innerHTML = `
+                    <div class="system-info-item">
+                        <h4>System Resources</h4>
+                        <p><span class="info-label">Platform:</span> <span class="info-value">${data.system.platform}</span></p>
+                        <p><span class="info-label">Processor:</span> <span class="info-value">${data.system.processor}</span></p>
+                        <p><span class="info-label">Python Version:</span> <span class="info-value">${data.system.python_version}</span></p>
+                        <p><span class="info-label">CPU Usage:</span> <span class="info-value">${data.system.cpu_percent}%</span></p>
+                        <p><span class="info-label">Memory Usage:</span> <span class="info-value">${data.system.memory_percent}%</span> 
+                           (${(data.system.memory_available).toFixed(2)}GB available of ${(data.system.memory_total).toFixed(2)}GB)</p>
+                        <p><span class="info-label">Disk Usage:</span> <span class="info-value">${data.system.disk_percent}%</span> 
+                           (${(data.system.disk_used).toFixed(2)}GB used of ${(data.system.disk_total).toFixed(2)}GB)</p>
+                        <p><span class="info-label">Process Memory:</span> <span class="info-value">${data.system.process_memory_mb} MB</span></p>
+                    </div>
+                `;
+            }
+            
+            // Runtime info
+            if (data.runtime) {
+                document.getElementById('runtimeInfo').innerHTML = `
+                    <div class="system-info-item">
+                        <h4>Runtime</h4>
+                        <p><span class="info-label">Start Time:</span> <span class="info-value">${data.runtime.start_time}</span></p>
+                        <p><span class="info-label">Uptime:</span> <span class="info-value">${formatUptime(data.runtime.uptime_seconds)}</span></p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Format uptime seconds into a human-readable format
+        function formatUptime(seconds) {
+            const days = Math.floor(seconds / (3600 * 24));
+            const hours = Math.floor((seconds % (3600 * 24)) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            
+            let uptimeString = '';
+            if (days > 0) uptimeString += `${days}d `;
+            if (hours > 0) uptimeString += `${hours}h `;
+            if (minutes > 0) uptimeString += `${minutes}m `;
+            uptimeString += `${secs}s`;
+            
+            return uptimeString.trim();
+        }
+        
+        // Create resource chart
+        function createResourceChart(data) {
+            const ctx = document.getElementById('resourceChart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (window.resourceChart) {
+                window.resourceChart.destroy();
+            }
+            
+            window.resourceChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Memory Used', 'Memory Available', 'Disk Used', 'Disk Available'],
+                    datasets: [{
+                        label: 'Resource Usage',
+                        data: [
+                            data.system.memory_percent,
+                            100 - data.system.memory_percent,
+                            data.system.disk_percent,
+                            100 - data.system.disk_percent
+                        ],
+                        backgroundColor: [
+                            'rgba(231, 76, 60, 0.6)',  // Red for used
+                            'rgba(46, 204, 113, 0.6)',  // Green for available
+                            'rgba(52, 152, 219, 0.6)',  // Blue for used
+                            'rgba(155, 89, 182, 0.6)'   // Purple for available
+                        ],
+                        borderColor: [
+                            'rgba(231, 76, 60, 1)',
+                            'rgba(46, 204, 113, 1)',
+                            'rgba(52, 152, 219, 1)',
+                            'rgba(155, 89, 182, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Memory and Disk Usage'
+                        },
+                        legend: {
+                            position: 'bottom',
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Load system info when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSystemInfo();
+        });
+    </script>
+</body>
+</html>

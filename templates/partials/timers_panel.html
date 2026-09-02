@@ -1,0 +1,61 @@
+<div class="panel" role="region" aria-labelledby="timers-panel-title">
+    <div class="panel-header" role="heading" aria-level="2" id="timers-panel-title">
+        <h2 class="panel-title">Timers</h2>
+        <span class="item-count" id="timers-count">({{ timers|length if timers else 0 }} active)</span>
+    </div>
+    
+    <form id="add-timer-form" 
+          hx-post="/api/timers" 
+          hx-target="#timers-list" 
+          hx-swap="beforeend"
+          hx-on:after-request="this.reset()"
+          role="form"
+          aria-label="Add new timer">
+        <div class="form-group">
+            <label for="add-timer-label" class="sr-only">Timer Label</label>
+            <input type="text" id="add-timer-label" name="label" class="form-control" placeholder="Timer label" required aria-label="Enter timer label">
+        </div>
+        <div class="form-group">
+            <label for="add-timer-seconds" class="sr-only">Seconds</label>
+            <input type="number" id="add-timer-seconds" name="seconds" class="form-control" placeholder="Seconds" min="1" value="60" required aria-label="Enter timer duration in seconds">
+        </div>
+        <button type="submit" class="btn btn-block" aria-label="Add timer to list">Add Timer</button>
+    </form>
+    
+    <div id="timers-container" role="region" aria-label="Timers list">
+        <ul id="timers-list" class="list-group" role="list" aria-label="List of active timers">
+            {% if timers %}
+                {% for timer in timers %}
+                    <li class="list-group-item" id="timer-{{ timer.id }}" role="listitem" aria-label="Timer: {{ timer.label }}, {{ timer.time_remaining }} seconds remaining">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="timer-label" aria-label="Timer name">{{ timer.label }}</div>
+                                <div class="timer-countdown" style="margin-left: 10px; font-weight: bold;" aria-label="Time remaining">
+                                    {% if timer.time_remaining %}
+                                        {% set minutes = timer.time_remaining // 60 %}
+                                        {% set seconds = timer.time_remaining % 60 %}
+                                        {{ minutes }}:{{ "%02d"|format(seconds) }}
+                                    {% else %}
+                                        0:00
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="timer-actions" role="group" aria-label="Timer actions">
+                                <button class="btn btn-sm btn-danger"
+                                        hx-delete="/api/timers/{{ timer.id }}"
+                                        hx-target="#timer-{{ timer.id }}"
+                                        hx-swap="delete"
+                                        aria-label="Delete timer: {{ timer.label[:50] if timer.label|length > 50 else timer.label }}">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </li>
+                {% endfor %}
+            {% else %}
+                <li class="list-group-item" role="listitem" aria-label="No active timers available">No active timers</li>
+            {% endif %}
+        </ul>
+    </div>
+</div>

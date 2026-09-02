@@ -1,0 +1,22 @@
+<li class="list-group-item note-item" id="note-modal-{{ note.id }}" role="listitem" aria-label="Note: {{ note.text }}">
+    <div class="note-content">{{ note.text }}</div>
+    <div class="note-actions" role="group" aria-label="Note actions in modal">
+        <button class="btn btn-sm"
+                hx-get="/api/notes/{{ note.id }}/edit"
+                hx-target="#note-modal-{{ note.id }}"
+                hx-swap="outerHTML"
+                aria-label="Edit note: {{ note.text[:50] if note.text|length > 50 else note.text }}">
+            <i class="icon icon-pencil" aria-hidden="true"></i>
+            <span class="sr-only">Edit</span>
+        </button>
+        <button class="btn btn-sm btn-danger"
+                hx-delete="/api/notes/{{ note.id }}"
+                hx-target="#note-modal-{{ note.id }}"
+                hx-swap="delete"
+                aria-label="Delete note: {{ note.text[:50] if note.text|length > 50 else note.text }}"
+                hx-on:htmx:afterSwap="if (typeof refreshNotesCount === 'function') { refreshNotesCount(); }">
+            <i class="icon icon-trash" aria-hidden="true"></i>
+            <span class="sr-only">Delete</span>
+        </button>
+    </div>
+</li>

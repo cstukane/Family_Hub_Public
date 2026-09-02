@@ -1,0 +1,210 @@
+<div id="add-event-modal"
+     class="modal"
+     role="dialog"
+     aria-labelledby="add-event-title"
+     aria-modal="true"
+     data-modal="add-event"
+     data-modal-init="initializeAddEventModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="add-event-title">Add Event</h2>
+            <button class="modal-close" aria-label="Close modal" data-action="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="add-event-form"
+                  role="form"
+                  aria-label="Add new calendar event"
+                  data-default-duration="60">
+                <div class="form-group">
+                    <label for="event-title">Title *</label>
+                    <input type="text"
+                           id="event-title"
+                           name="title"
+                           class="form-control"
+                           placeholder="Event title"
+                           required
+                           aria-required="true">
+                </div>
+
+                <div class="form-row" style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="event-starts-at">Start *</label>
+                        <input type="datetime-local"
+                               id="event-starts-at"
+                               name="starts_at"
+                               class="form-control"
+                               required
+                               aria-required="true">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="event-ends-at">End *</label>
+                        <input type="datetime-local"
+                               id="event-ends-at"
+                               name="ends_at"
+                               class="form-control"
+                               required
+                               aria-required="true">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label" for="event-all-day">
+                        <input type="checkbox"
+                               id="event-all-day"
+                               name="all_day"
+                               value="1">
+                        All-day
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label for="event-location">Location</label>
+                    <input type="text"
+                           id="event-location"
+                           name="location"
+                           class="form-control"
+                           placeholder="Location (optional)">
+                </div>
+
+                <div class="form-group">
+                    <label for="event-description">Description</label>
+                    <textarea id="event-description"
+                              name="description"
+                              class="form-control"
+                              placeholder="Description (optional)"
+                              rows="3"></textarea>
+                </div>
+
+                <div id="advanced-fields" style="display: block;">
+                    <div class="form-group">
+                        <label for="event-repeat">Repeat</label>
+                        <select id="event-repeat"
+                                name="repeat"
+                                class="form-control">
+                            <option value="none" selected>Does not repeat</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="yearly">Yearly</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row" id="repeat-end-row" style="display: none; gap: 10px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="event-repeat-end">Ends</label>
+                            <select id="event-repeat-end"
+                                    name="repeat_end"
+                                    class="form-control">
+                                <option value="never" selected>Never</option>
+                                <option value="count">After N occurrences</option>
+                                <option value="until">On date</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1; display: none;" data-repeat-end="count">
+                            <label for="event-repeat-count">Occurrences</label>
+                            <input type="number"
+                                   id="event-repeat-count"
+                                   name="repeat_count"
+                                   class="form-control"
+                                   min="1"
+                                   step="1"
+                                   placeholder="10">
+                        </div>
+                        <div class="form-group" style="flex: 1; display: none;" data-repeat-end="until">
+                            <label for="event-repeat-until">End date</label>
+                            <input type="date"
+                                   id="event-repeat-until"
+                                   name="repeat_until"
+                                   class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="event-guests">Guests (emails)</label>
+                        <input type="text"
+                               id="event-guests"
+                               name="guests"
+                               class="form-control"
+                               placeholder="name@example.com, other@example.com">
+                    </div>
+
+                    <div class="form-row" style="display: flex; gap: 10px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="event-reminders">Reminders</label>
+                            <select id="event-reminders"
+                                    name="reminders"
+                                    class="form-control">
+                                <option value="default">Default reminders</option>
+                                <option value="none">No reminders</option>
+                                <option value="0">At time of event</option>
+                                <option value="5">5 minutes before</option>
+                                <option value="10">10 minutes before</option>
+                                <option value="15">15 minutes before</option>
+                                <option value="30">30 minutes before</option>
+                                <option value="60">1 hour before</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="event-calendar">Calendar</label>
+                            <select id="event-calendar"
+                                    name="calendar_selection"
+                                    class="form-control">
+                                {% for option in calendar_options %}
+                                <option value="{{ option.value }}"
+                                        {% if option.value == default_calendar_selection %}selected{% endif %}>
+                                    {{ option.label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row" style="display: flex; gap: 10px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="event-visibility">Visibility</label>
+                            <select id="event-visibility"
+                                    name="visibility"
+                                    class="form-control">
+                                <option value="default">Default</option>
+                                <option value="public">Public</option>
+                                <option value="private">Private</option>
+                                <option value="confidential">Confidential</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" style="flex: 1;">
+                            <label for="event-color">Color</label>
+                            <select id="event-color"
+                                    name="color"
+                                    class="form-control">
+                                <option value="">Default</option>
+                                <option value="blue">Blue</option>
+                                <option value="green">Green</option>
+                                <option value="red">Red</option>
+                                <option value="yellow">Yellow</option>
+                                <option value="purple">Purple</option>
+                                <option value="orange">Orange</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <button type="button"
+                            id="more-options-btn"
+                            class="btn btn-sm"
+                            data-action="toggle-advanced-fields">
+                        Fewer options...
+                    </button>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit"
+                            class="btn btn-block">
+                        Add Event
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,144 @@
+apps:
+- action: switch_view
+  icon: calendar.svg
+  id: home
+  label: Home
+  target: week_calendar
+- action: open_tab
+  icon: youtube.svg
+  id: youtube
+  label: YouTube
+  url: https://www.youtube.com/
+- action: open_iframe
+  icon: sports.svg
+  id: espn
+  label: ESPN
+  url: https://www.espn.com/watch/
+- action: open_tab
+  icon: disney.svg
+  id: disney
+  label: Disney+
+  url: https://www.disneyplus.com/
+- action: open_tab
+  icon: hbo.svg
+  id: hbo_max
+  label: HBO Max
+  url: https://www.max.com/
+- action: open_iframe
+  icon: roku.svg
+  id: roku
+  label: Roku
+  url: https://therokuchannel.roku.com/
+- action: open_tab
+  icon: pluto.svg
+  id: pluto
+  label: Pluto
+  url: https://pluto.tv/
+local_apps: []
+extra_apps: []
+features:
+  auth: false
+  kiosk: true
+  voice: false
+  plugins: false
+layout:
+  main_view: week_calendar
+  sidebar:
+  - notes
+  - shopping
+  - timers
+  - weather
+  - sports
+commute:
+  enabled: false
+  provider: mapbox
+  always_visible: false
+  home_address: ''
+  work_address: ''
+  morning_window:
+    start: 06:00
+    end: 09:00
+  evening_window:
+    start: '16:30'
+    end: '18:30'
+  refresh_minutes: 2
+  google_api_key: ''
+  mapbox_token: ''
+music:
+  enabled: false
+  providers:
+    radio_browser:
+      enabled: false
+      base_url: https://de1.api.radio-browser.info
+      default_presets: []
+    somafm:
+      enabled: false
+      catalog_url: https://somafm.com/channels.json
+    podcast_index:
+      enabled: false
+      api_base_url: https://api.podcastindex.org/api/1.0
+      api_key: ''
+      api_secret: ''
+  volume: 70
+media:
+  enabled: false
+  launcher_endpoint: ''
+  allowed_domains:
+  - youtube.com
+  - youtu.be
+  - twitch.tv
+  - pluto.tv
+  - roku.com
+  - roku.tv
+  - vimeo.com
+  - dailymotion.com
+  - tubitv.com
+  - spotify.com
+  - disneyplus.com
+  - max.com
+  - espn.com
+  - photos.google.com
+  - google.com
+  - therokuchannel.roku.com
+photos:
+  enabled: false
+  local_path: ./instance/photos
+  slideshow_interval: 5
+  sync_enabled: false
+providers:
+  calendar:
+    google:
+      calendar_ids:
+      - primary
+      client_id: ''
+      client_secret: ''
+    ics_url: https://example.com/family.ics
+    kind: ics
+  sports:
+    api_key: ''
+    favorite_teams: []
+    kind: espn
+  weather:
+    kind: open_meteo
+    location:
+      name: Your City
+      lat: 0.0
+      lon: 0.0
+security:
+  admin_rate_limit: 10 per minute
+  default_rate_limit: 60 per minute
+  ip_whitelist: []
+  ip_whitelist_enabled: false
+  rate_limit_enabled: true
+  rate_limit_storage_uri: memory://
+  secure_headers: true
+  session_timeout: 3600
+  socketio_allowed_origins:
+  - http://127.0.0.1:5000
+  - http://localhost:5000
+  ssl_cert_path: null
+  ssl_enabled: false
+  ssl_key_path: null
+ui:
+  density: compact
+  theme: auto

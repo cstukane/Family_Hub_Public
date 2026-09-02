@@ -1,0 +1,179 @@
+<div class="modal" id="chore-modal" tabindex="-1" role="dialog" aria-labelledby="chore-modal-title" aria-modal="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="chore-modal-title">Chore Management</h5>
+                <button type="button" class="close modal-close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="chore-list" class="chore-list">
+                    <!-- Chore list will be loaded here via HTMX -->
+                    <div hx-get="/api/chores" hx-trigger="load" hx-swap="innerHTML">
+                        <p>Loading chores...</p>
+                    </div>
+                </div>
+                <div class="chore-form-section mt-3">
+                    <h6>Add New Chore</h6>
+                    <form id="chore-form" hx-post="/api/chores" hx-target="#chore-list" hx-swap="afterbegin" hx-on:htmx:after-request="this.reset()">
+                        <div class="form-group">
+                            <label for="chore-title">Title</label>
+                            <input type="text" class="form-control" id="chore-title" name="title" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="chore-assignee">Assignee</label>
+                            <select class="form-control" id="chore-assignee" name="assignee">
+                                <option value="">Select assignee</option>
+                                <option value="parent">Parent</option>
+                                <option value="child1">Child 1</option>
+                                <option value="child2">Child 2</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="chore-due-date">Due Date</label>
+                            <input type="datetime-local" class="form-control" id="chore-due-date" name="due_date">
+                        </div>
+                        <div class="form-group">
+                            <label for="chore-priority">Priority</label>
+                            <select class="form-control" id="chore-priority" name="priority">
+                                <option value="low">Low</option>
+                                <option value="normal" selected>Normal</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="chore-description">Description</label>
+                            <textarea class="form-control" id="chore-description" name="description" rows="3"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Chore</button>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary modal-close">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.chore-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.chore-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.chore-item.completed {
+    text-decoration: line-through;
+    color: #888;
+}
+
+.chore-item.high-priority {
+    border-left: 4px solid #ff6b6b;
+}
+
+.chore-item.urgent-priority {
+    border-left: 4px solid #ff0000;
+    font-weight: bold;
+}
+
+.chore-item-title {
+    flex: 1;
+}
+
+.chore-item-assignee {
+    margin-left: 10px;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.chore-item-due {
+    margin-left: 10px;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.chore-actions {
+    display: flex;
+    gap: 5px;
+    margin-left: 10px;
+}
+
+.chore-form-section {
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+}
+
+.chore-count {
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+</style>
+
+<script>
+// Function to toggle chore completion
+function toggleChoreCompletion(choreId, completed) {
+    const url = completed ? `/api/chores/${choreId}/uncomplete` : `/api/chores/${choreId}/complete`;
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            console.error('Error updating chore:', data.error);
+            alert('Error updating chore: ' + data.error);
+        } else {
+            // Update the UI to reflect the change
+            const choreElement = document.getElementById(`chore-item-${choreId}`);
+            if (choreElement) {
+                if (data.completed) {
+                    choreElement.classList.add('completed');
+                } else {
+                    choreElement.classList.remove('completed');
+                }
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating chore');
+    });
+}
+
+// Function to delete a chore
+function deleteChore(choreId) {
+    if (confirm('Are you sure you want to delete this chore?')) {
+        fetch(`/api/chores/${choreId}`, {
+            method: 'DELETE',
+        })
+        .then(response => {
+            if (response.ok) {
+                const choreElement = document.getElementById(`chore-item-${choreId}`);
+                if (choreElement) {
+                    choreElement.remove();
+                }
+            } else {
+                alert('Error deleting chore');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting chore');
+        });
+    }
+}
+</script>

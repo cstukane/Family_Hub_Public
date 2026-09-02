@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>lowlight — UI Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Poppins', sans-serif; }
+  svg { fill: none; stroke: currentColor; }
+  button { font-family: 'Poppins', sans-serif; }
+  input { font-family: 'Poppins', sans-serif; }
+  input::placeholder { color: #5e6874; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="postcards.jsx"></script>
+<script type="text/babel" src="fixes.jsx"></script>
+
+<script type="text/babel">
+const {
+  PostCardAiry, PostCardFocused, PostCardWarm,
+  SignInCentered, SignInPanel,
+  MobileNavFixed, NotifTrayFixed, SettingsFixed,
+  T,
+} = window;
+
+const bg = '#070c11';
+
+// ── Annotation chip ─────────────────────────────────────────────────────────
+function Tag({ children, color = 'amber' }) {
+  const cols = {
+    amber: { bg: 'rgba(193,148,100,0.14)', border: 'rgba(193,148,100,0.3)', text: '#d4a97a' },
+    green: { bg: 'rgba(100,170,130,0.12)', border: 'rgba(100,170,130,0.28)', text: '#82c4a4' },
+    blue:  { bg: 'rgba(100,140,200,0.12)', border: 'rgba(100,140,200,0.28)', text: '#8ab4e8' },
+  };
+  const c = cols[color] || cols.amber;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      padding: '2px 8px', borderRadius: 999, fontSize: '0.65rem', fontWeight: 500,
+      letterSpacing: '0.04em', background: c.bg, border: `1px solid ${c.border}`, color: c.text,
+    }}>{children}</span>
+  );
+}
+
+// ── Frame wrapper — wraps artboard content with page-bg padding ──────────────
+function Frame({ children, pad = 20 }) {
+  return (
+    <div style={{ background: bg, padding: pad, borderRadius: 4 }}>
+      {children}
+    </div>
+  );
+}
+
+// ── Section header note ───────────────────────────────────────────────────────
+function Note({ children }) {
+  return (
+    <div style={{
+      fontFamily: 'Poppins, sans-serif',
+      fontSize: '0.78rem', lineHeight: 1.6,
+      color: T.textSecondary,
+      maxWidth: 620,
+      padding: '8px 0 4px',
+    }}>{children}</div>
+  );
+}
+
+// ── Header mockup (for context) ───────────────────────────────────────────────
+function HeaderMockup({ compact = false }) {
+  const sz = compact ? '34px' : '38px';
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: compact ? '0 12px' : '0 20px',
+      height: compact ? 60 : 68,
+      background: 'rgba(11,17,24,0.92)',
+      borderBottom: `1px solid ${T.lineMuted}`,
+      borderRadius: '12px 12px 0 0',
+      fontFamily: 'Poppins, sans-serif',
+    }}>
+      <span style={{ fontSize: compact ? '1.3rem' : '1.6rem', letterSpacing: '-0.04em', color: '#e6d7c3', fontWeight: 300 }}>
+        lowlight
+      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 6 : 10 }}>
+        {/* Bell */}
+        <div style={{ width: sz, height: sz, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textSecondary }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+        </div>
+        {/* Settings */}
+        <div style={{ width: sz, height: sz, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10, border: `1px solid ${T.borderWarm}`, background: 'rgba(194,173,146,0.06)', color: T.textSecondary }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+            <circle cx="12" cy="12" r="3" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.4 15a1 1 0 00.2 1.1l.1.1a1.2 1.2 0 010 1.7l-1.2 1.2a1.2 1.2 0 01-1.7 0l-.1-.1a1 1 0 00-1.1-.2 1 1 0 00-.6.9V20a1.2 1.2 0 01-1.2 1.2h-1.7A1.2 1.2 0 0111 20v-.2a1 1 0 00-.6-.9 1 1 0 00-1.1.2l-.1.1a1.2 1.2 0 01-1.7 0l-1.2-1.2a1.2 1.2 0 010-1.7l.1-.1A1 1 0 006.6 16a1 1 0 00-.9-.6H4A1.2 1.2 0 012.8 14v-1.7A1.2 1.2 0 014 11h.2a1 1 0 00.9-.6 1 1 0 00-.2-1.1L4.8 9.2a1.2 1.2 0 010-1.7L6 6.3a1.2 1.2 0 011.7 0l.1.1a1 1 0 001.1.2A1 1 0 009.8 6V4A1.2 1.2 0 0111 2.8h1.7A1.2 1.2 0 0114 4v.2a1 1 0 00.6.9 1 1 0 001.1-.2l.1-.1a1.2 1.2 0 011.7 0l1.2 1.2a1.2 1.2 0 010 1.7l-.1.1a1 1 0 00-.2 1.1 1 1 0 00.9.6h.2A1.2 1.2 0 0121.2 11V12.3A1.2 1.2 0 0120 13.6h-.1a1 1 0 00-.5 1.4z" />
+          </svg>
+        </div>
+        {/* Avatar */}
+        <div style={{ width: sz, height: sz, borderRadius: '50%', background: 'radial-gradient(circle at 35% 30%, #72563e 0%, #423124 42%, #151c27 100%)', border: `1px solid rgba(193,183,169,0.14)` }} />
+        {/* Post */}
+        <div style={{ height: compact ? '34px' : '36px', padding: compact ? '0 10px' : '0 14px', borderRadius: 999, border: `1px solid ${T.borderWarm}`, background: 'rgba(194,173,146,0.08)', color: '#e8ddd1', fontSize: compact ? '0.78rem' : '0.84rem', fontWeight: 500, display: 'flex', alignItems: 'center' }}>
+          {compact ? '+' : 'Post'}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Footer mockup ─────────────────────────────────────────────────────────────
+function FooterMockup() {
+  return (
+    <div style={{
+      fontFamily: 'Poppins, sans-serif',
+      padding: '28px 24px 20px',
+      textAlign: 'center', background: bg,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 10 }}>
+        {['About', 'Help', 'Terms', 'Privacy'].map(l => (
+          <span key={l} style={{ fontSize: '0.75rem', color: T.textSecondary, cursor: 'pointer' }}>{l}</span>
+        ))}
+      </div>
+      <div style={{ fontSize: '0.72rem', color: T.textMuted, fontStyle: 'italic', opacity: 0.8 }}>
+        quiet. honest. here.
+      </div>
+    </div>
+  );
+}
+
+// ── Full feed mockup for PostCard section ─────────────────────────────────────
+function FeedMockup({ Card, label, tags = [], notes = '' }) {
+  return (
+    <div style={{ fontFamily: 'Poppins, sans-serif' }}>
+      <HeaderMockup />
+      <div style={{ background: bg, padding: '20px 16px 16px' }}>
+        {notes && <div style={{ fontSize: '0.75rem', color: T.textMuted, lineHeight: 1.6, marginBottom: 14 }}>{notes}</div>}
+        {tags.length > 0 && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+            {tags.map((t, i) => <Tag key={i} color={t.c}>{t.label}</Tag>)}
+          </div>
+        )}
+        <Card />
+      </div>
+    </div>
+  );
+}
+
+// ── Main app ──────────────────────────────────────────────────────────────────
+function App() {
+  return (
+    <DesignCanvas>
+
+      {/* ── POSTCARDS ─────────────────────────────────────────────── */}
+      <DCSection id="postcards" title="PostCard" subtitle="Feed post — 3 directions for header density, action targets, and comment nesting">
+
+        <DCArtboard id="pc1" label="V1 · Airy" width={375}>
+          <FeedMockup
+            Card={PostCardAiry}
+            tags={[
+              { label: '40px avatar', c: 'amber' },
+              { label: '2-line meta', c: 'amber' },
+              { label: '52px action bar', c: 'green' },
+              { label: 'nested comments', c: 'blue' },
+            ]}
+            notes="More vertical breathing room. Username + timestamp stacked for clarity. Action bar min-height 52px with 44px touch targets. Comment nesting via indentation + bubble."
+          />
+        </DCArtboard>
+
+        <DCArtboard id="pc2" label="V2 · Focused" width={375}>
+          <FeedMockup
+            Card={PostCardFocused}
+            tags={[
+              { label: 'near edge-to-edge image', c: 'amber' },
+              { label: 'right-aligned actions', c: 'blue' },
+              { label: 'flat comment list', c: 'green' },
+            ]}
+            notes="Let the post image breathe to the edges. Actions pull right to reduce visual noise. Comments are flat inline — reply indented simply."
+          />
+        </DCArtboard>
+
+        <DCArtboard id="pc3" label="V3 · Warm Refined" width={375}>
+          <FeedMockup
+            Card={PostCardWarm}
+            tags={[
+              { label: 'warm avatar ring', c: 'amber' },
+              { label: 'pill-style actions w/ labels', c: 'amber' },
+              { label: 'timestamped comments', c: 'blue' },
+            ]}
+            notes="Warmest treatment — pill buttons with like/comment counts and text labels, avatar ring in amber. Comments include per-comment timestamps for better thread scanning."
+          />
+        </DCArtboard>
+
+      </DCSection>
+
+      {/* ── SIGN-IN ─────────────────────────────────────────────────── */}
+      <DCSection id="signin" title="Sign-in" subtitle="Auth modal — unified to warm palette, 2 placement options">
+
+        <DCArtboard id="si1" label="V1 · Centered Modal" width={440} height={520}>
+          <SignInCentered />
+        </DCArtboard>
+
+        <DCArtboard id="si2" label="V2 · Side Panel" width={440} height={520}>
+          <SignInPanel />
+        </DCArtboard>
+
+      </DCSection>
+
+      {/* ── COMPONENT FIXES ─────────────────────────────────────────── */}
+      <DCSection id="fixes" title="Component Fixes" subtitle="Palette unification — removing gray-700/gray-800/[#1e1e1e] outliers throughout">
+
+        <DCArtboard id="nav" label="Mobile Nav" width={390}>
+          <Frame pad={20}>
+            <MobileNavFixed />
+          </Frame>
+        </DCArtboard>
+
+        <DCArtboard id="notif" label="Notification Tray" width={320}>
+          <Frame>
+            <NotifTrayFixed />
+          </Frame>
+        </DCArtboard>
+
+        <DCArtboard id="settings" label="Settings Categories" width={520}>
+          <Frame pad={24}>
+            <div style={{ fontFamily: 'Poppins', fontSize: '0.72rem', color: T.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 14 }}>
+              SVG icons replace Unicode glyphs — glyphs preserved in source
+            </div>
+            <SettingsFixed />
+          </Frame>
+        </DCArtboard>
+
+        <DCArtboard id="header-d" label="Header (desktop)" width={680}>
+          <div style={{ borderRadius: 12, overflow: 'hidden' }}>
+            <HeaderMockup compact={false} />
+            <FooterMockup />
+          </div>
+        </DCArtboard>
+
+        <DCArtboard id="postbtn" label="Post Button (fixed)" width={360}>
+          <Frame>
+            <div style={{ fontFamily: 'Poppins', fontSize: '0.72rem', color: T.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 14 }}>
+              PostButton bg: #2c3440 → warm gradient
+            </div>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '0.65rem', color: T.textMuted }}>Before</span>
+                <button style={{ background: '#2c3440', color: 'white', padding: '10px 16px', borderRadius: 8, border: 'none', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Post</button>
+              </div>
+              <div style={{ width: 1, height: 50, background: T.lineMuted }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '0.65rem', color: T.textMuted }}>After</span>
+                <button style={{ background: T.accentGrad, color: '#fff8f0', padding: '10px 18px', borderRadius: 999, border: '1px solid rgba(241,185,149,0.4)', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.01em' }}>Post</button>
+              </div>
+            </div>
+          </Frame>
+        </DCArtboard>
+
+      </DCSection>
+
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

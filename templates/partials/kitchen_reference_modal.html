@@ -1,0 +1,138 @@
+<div id="kitchen-reference-modal"
+     class="modal"
+     role="dialog"
+     aria-labelledby="kitchen-reference-modal-title"
+     aria-modal="true"
+     data-modal="kitchen-reference"
+     data-modal-init="initKitchenReferenceModal">
+    <div class="modal-content" role="document">
+        <div class="modal-header" role="heading" aria-level="2" id="kitchen-reference-modal-title">
+            <h2 class="modal-title">Kitchen Reference</h2>
+            <div>
+                <span class="modal-close" aria-label="Close modal" data-action="close-modal">&times;</span>
+            </div>
+        </div>
+
+        <div class="modal-body" role="document">
+            <section class="kitchen-reference-section" aria-labelledby="doneness-table-title">
+                <div class="section-heading">
+                    <h3 id="doneness-table-title">Safe Internal Temperatures</h3>
+                    <p class="section-subtitle">Use a thermometer at the thickest part and let meat rest for accuracy.</p>
+                </div>
+                <div class="table-scroll">
+                    <table class="reference-table" role="table" aria-label="Meat temperatures by doneness">
+                        <thead>
+                            <tr>
+                                <th scope="col">Doneness</th>
+                                <th scope="col">Beef</th>
+                                <th scope="col">Pork</th>
+                                <th scope="col">Chicken</th>
+                                <th scope="col">Fish</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th scope="row">Rare</th>
+                                <td>125&deg;F</td>
+                                <td>130&deg;F</td>
+                                <td class="muted">N/A</td>
+                                <td>120&deg;F</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Medium-rare</th>
+                                <td>135&deg;F</td>
+                                <td>135&deg;F</td>
+                                <td class="muted">N/A</td>
+                                <td>125&deg;F</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Medium</th>
+                                <td>145&deg;F</td>
+                                <td>145&deg;F</td>
+                                <td>160&deg;F</td>
+                                <td>130&deg;F</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Medium-well</th>
+                                <td>150&deg;F</td>
+                                <td>155&deg;F</td>
+                                <td>165&deg;F</td>
+                                <td>140&deg;F</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Well</th>
+                                <td>160&deg;F</td>
+                                <td>165&deg;F</td>
+                                <td>170&deg;F</td>
+                                <td>145&deg;F</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="kitchen-reference-section" aria-labelledby="converter-title">
+                <div class="section-heading">
+                    <h3 id="converter-title">Unit Converter</h3>
+                    <p class="section-subtitle">Choose any two units and type either side; the opposite side updates automatically.</p>
+                </div>
+                <div class="kitchen-converter" role="group" aria-label="Two-way unit converter">
+                    <div class="converter-side" data-side="left">
+                        <label for="converter-unit-left">Unit</label>
+                        <select id="converter-unit-left" data-converter="select-left" class="form-control" aria-label="Select left unit">
+                            <option value="ounces" selected>Ounces (fl oz)</option>
+                            <option value="cups">Cups</option>
+                            <option value="tablespoons">Tablespoons</option>
+                            <option value="teaspoons">Teaspoons</option>
+                            <option value="milliliters">Milliliters</option>
+                            <option value="liters">Liters</option>
+                            <option value="pints">Pints</option>
+                            <option value="quarts">Quarts</option>
+                        </select>
+                        <label for="converter-value-left">Amount</label>
+                        <input id="converter-value-left"
+                               type="number"
+                               min="0"
+                               step="0.01"
+                               value="8"
+                               class="form-control converter-input"
+                               data-converter="input-left"
+                               aria-label="Enter amount for left side">
+                    </div>
+
+                    <div class="converter-side" data-side="right">
+                        <label for="converter-unit-right">Unit</label>
+                        <select id="converter-unit-right" data-converter="select-right" class="form-control" aria-label="Select right unit">
+                            <option value="ounces">Ounces (fl oz)</option>
+                            <option value="cups" selected>Cups</option>
+                            <option value="tablespoons">Tablespoons</option>
+                            <option value="teaspoons">Teaspoons</option>
+                            <option value="milliliters">Milliliters</option>
+                            <option value="liters">Liters</option>
+                            <option value="pints">Pints</option>
+                            <option value="quarts">Quarts</option>
+                        </select>
+                        <label for="converter-value-right">Amount</label>
+                        <input id="converter-value-right"
+                               type="number"
+                               min="0"
+                               step="0.01"
+                               value="1"
+                               class="form-control converter-input"
+                               data-converter="input-right"
+                               aria-label="Enter amount for right side">
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button"
+                    class="btn"
+                    data-action="close-modal"
+                    aria-label="Close modal">
+                Close
+            </button>
+        </div>
+    </div>
+</div>

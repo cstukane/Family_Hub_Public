@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ config.ui.theme if config and config.ui.theme else 'auto' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Configuration - Family Hub</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <script src="https://unpkg.com/htmx.org@1.8.4"></script>
+    <style>
+        .admin-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            grid-template-rows: auto 1fr;
+            min-height: 100vh;
+        }
+        
+        .admin-sidebar {
+            grid-column: 1 / 2;
+            grid-row: 2 / 3;
+            background-color: var(--surface-color);
+            border-right: 1px solid var(--border-color);
+            padding: 1rem;
+        }
+        
+        .admin-content {
+            grid-column: 2 / 3;
+            grid-row: 2 / 3;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        
+        .admin-header {
+            grid-column: 1 / -1;
+            grid-row: 1 / 2;
+            background-color: var(--surface-color);
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .admin-nav {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .admin-nav li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .admin-nav a {
+            display: block;
+            padding: 0.75rem;
+            text-decoration: none;
+            color: var(--text-color);
+            border-radius: var(--border-radius);
+            transition: background-color 0.2s;
+        }
+        
+        .admin-nav a:hover {
+            background-color: color-mix(in srgb, var(--primary-color) 20%, transparent);
+        }
+        
+        .admin-nav a.active {
+            background-color: color-mix(in srgb, var(--primary-color) 30%, transparent);
+        }
+        
+        .admin-logout {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .admin-panel-title {
+            margin-bottom: 1.5rem;
+            color: var(--text-color);
+        }
+        
+        .config-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background-color: var(--surface-color);
+        }
+        
+        .config-section-title {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: var(--text-color);
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-col {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-size: var(--font-size-base);
+        }
+        
+        .form-control:focus {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+        
+        .form-check {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-check-input {
+            margin-right: 0.5rem;
+        }
+        
+        .form-array-item {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            align-items: center;
+        }
+        
+        .form-array-item input {
+            flex: 1;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: var(--border-radius);
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+        }
+        
+        .btn-danger {
+            background-color: var(--error-color);
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+        }
+        
+        .btn-warning {
+            background-color: var(--warning-color);
+        }
+        
+        .admin-btn {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: var(--border-radius);
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .admin-btn-danger {
+            background-color: var(--error-color);
+        }
+        
+        .config-actions {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        .alert-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .alert-error {
+            background-color: var(--error-color);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Admin header -->
+        <header class="admin-header">
+            <h1>Family Hub Admin Panel</h1>
+            <button id="logoutBtn" class="admin-btn admin-btn-danger">Logout</button>
+        </header>
+        
+        <!-- Admin sidebar -->
+        <aside class="admin-sidebar">
+            <ul class="admin-nav">
+                <li><a href="/admin">Dashboard</a></li>
+                <li><a href="/admin/config" class="active">Configuration</a></li>
+                <li><a href="/admin/system">System Info</a></li>
+                <li><a href="/admin/diagnostics">Diagnostics</a></li>
+                <li><a href="/admin/backup">Backups</a></li>
+                <li><a href="/admin/updates">Updates</a></li>
+                <li><a href="/">← Back to Dashboard</a></li>
+            </ul>
+            
+            <div class="admin-logout">
+                <button id="logoutBtnSidebar" class="admin-btn admin-btn-danger btn-block">Logout</button>
+            </div>
+        </aside>
+        
+        <!-- Admin content -->
+        <main class="admin-content">
+            <h2 class="admin-panel-title">Configuration</h2>
+            
+            <div id="alertMessage" class="alert"></div>
+            
+            <form id="configForm">
+                <!-- Layout Configuration -->
+                <div class="config-section">
+                    <h3 class="config-section-title">Layout Configuration</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="mainView">Main View</label>
+                        <select id="mainView" name="layout.main_view" class="form-control">
+                            <option value="week_calendar" {% if config.layout.main_view == 'week_calendar' %}selected{% endif %}>Week Calendar</option>
+                            <option value="media" {% if config.layout.main_view == 'media' %}selected{% endif %}>Media</option>
+                            <option value="cooking" {% if config.layout.main_view == 'cooking' %}selected{% endif %}>Cooking Mode</option>
+                            <option value="sports" {% if config.layout.main_view == 'sports' %}selected{% endif %}>Sports</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Sidebar Panels</label>
+                        <div id="sidebarPanels">
+                            <!-- Sidebar panels will be dynamically added -->
+                        </div>
+                        <button type="button" id="addSidebarPanel" class="btn btn-warning">Add Panel</button>
+                    </div>
+                </div>
+                
+                <!-- Features Configuration -->
+                <div class="config-section">
+                    <h3 class="config-section-title">Features</h3>
+                    
+                    <div class="form-check">
+                        <input type="checkbox" id="featureVoice" name="features.voice" class="form-check-input" {% if config.features.voice %}checked{% endif %}>
+                        <label class="form-check-label" for="featureVoice">Voice Commands</label>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input type="checkbox" id="featureKiosk" name="features.kiosk" class="form-check-input" {% if config.features.kiosk %}checked{% endif %}>
+                        <label class="form-check-label" for="featureKiosk">Kiosk Mode</label>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input type="checkbox" id="featureAuth" name="features.auth" class="form-check-input" {% if config.features.auth %}checked{% endif %}>
+                        <label class="form-check-label" for="featureAuth">Authentication</label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="voiceWakeWord">Voice Wake Word</label>
+                        <input type="text" id="voiceWakeWord" name="features.voice_wake_word" class="form-control" value="{{ config.features.voice_wake_word or 'kitchen' }}">
+                    </div>
+                </div>
+                
+                <!-- UI Configuration -->
+                <div class="config-section">
+                    <h3 class="config-section-title">UI Configuration</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="uiTheme">Theme</label>
+                        <select id="uiTheme" name="ui.theme" class="form-control">
+                            <option value="auto" {% if config.ui.theme == 'auto' %}selected{% endif %}>Auto (System)</option>
+                            <option value="light" {% if config.ui.theme == 'light' %}selected{% endif %}>Light</option>
+                            <option value="dark" {% if config.ui.theme == 'dark' %}selected{% endif %}>Dark</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="uiDensity">Density</label>
+                        <select id="uiDensity" name="ui.density" class="form-control">
+                            <option value="compact" {% if config.ui.density == 'compact' %}selected{% endif %}>Compact</option>
+                            <option value="comfortable" {% if config.ui.density == 'comfortable' %}selected{% endif %}>Comfortable</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Security Configuration -->
+                <div class="config-section">
+                    <h3 class="config-section-title">Security Configuration</h3>
+                    
+                    <div class="form-check">
+                        <input type="checkbox" id="sslEnabled" name="security.ssl_enabled" class="form-check-input" {% if config.security.ssl_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="sslEnabled">SSL Enabled</label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="sslCertPath">SSL Certificate Path</label>
+                        <input type="text" id="sslCertPath" name="security.ssl_cert_path" class="form-control" value="{{ config.security.ssl_cert_path or '' }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="sslKeyPath">SSL Key Path</label>
+                        <input type="text" id="sslKeyPath" name="security.ssl_key_path" class="form-control" value="{{ config.security.ssl_key_path or '' }}">
+                    </div>
+                    
+                    <div class="form-check">
+                        <input type="checkbox" id="rateLimitEnabled" name="security.rate_limit_enabled" class="form-check-input" {% if config.security.rate_limit_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="rateLimitEnabled">Rate Limiting Enabled</label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="defaultRateLimit">Default Rate Limit</label>
+                        <input type="text" id="defaultRateLimit" name="security.default_rate_limit" class="form-control" value="{{ config.security.default_rate_limit or '60 per minute' }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="adminRateLimit">Admin Rate Limit</label>
+                        <input type="text" id="adminRateLimit" name="security.admin_rate_limit" class="form-control" value="{{ config.security.admin_rate_limit or '10 per minute' }}">
+                    </div>
+                    
+                    <div class="form-check">
+                        <input type="checkbox" id="ipWhitelistEnabled" name="security.ip_whitelist_enabled" class="form-check-input" {% if config.security.ip_whitelist_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="ipWhitelistEnabled">IP Whitelist Enabled</label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">IP Whitelist</label>
+                        <div id="ipWhitelist">
+                            <!-- IP whitelist entries will be dynamically added -->
+                        </div>
+                        <button type="button" id="addIpWhitelist" class="btn btn-warning">Add IP</button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="sessionTimeout">Session Timeout (seconds)</label>
+                        <input type="number" id="sessionTimeout" name="security.session_timeout" class="form-control" value="{{ config.security.session_timeout or 3600 }}">
+                    </div>
+                    
+                    <div class="form-check">
+                        <input type="checkbox" id="secureHeaders" name="security.secure_headers" class="form-check-input" {% if config.security.secure_headers %}checked{% endif %}>
+                        <label class="form-check-label" for="secureHeaders">Secure Headers</label>
+                    </div>
+                </div>
+                
+                <div class="config-actions">
+                    <button type="submit" class="btn btn-success">Save Configuration</button>
+                    <button type="button" id="cancelBtn" class="btn">Cancel</button>
+                </div>
+            </form>
+        </main>
+    </div>
+    
+    <script>
+        // Logout functionality
+        function logout() {
+            fetch('/api/admin/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                window.location.href = '/admin/login';
+            })
+            .catch(error => {
+                console.error('Logout error:', error);
+                window.location.href = '/admin/login';
+            });
+        }
+        
+        // Add event listeners to logout buttons
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+        document.getElementById('logoutBtnSidebar').addEventListener('click', logout);
+        
+        // Add sidebar panel
+        document.getElementById('addSidebarPanel').addEventListener('click', function() {
+            const container = document.getElementById('sidebarPanels');
+            const panelCount = container.children.length - 1; // Exclude the button
+            const panelDiv = document.createElement('div');
+            panelDiv.className = 'form-array-item';
+            panelDiv.innerHTML = `
+                <input type="text" name="layout.sidebar[${panelCount}]" class="form-control" placeholder="Panel name (notes, shopping, etc.)">
+                <button type="button" class="btn btn-danger remove-panel">Remove</button>
+            `;
+            container.insertBefore(panelDiv, this);
+            
+            // Add event listener for remove button
+            panelDiv.querySelector('.remove-panel').addEventListener('click', function() {
+                this.parentElement.remove();
+            });
+        });
+        
+        // Add IP whitelist
+        document.getElementById('addIpWhitelist').addEventListener('click', function() {
+            const container = document.getElementById('ipWhitelist');
+            const ipCount = container.children.length;
+            const ipDiv = document.createElement('div');
+            ipDiv.className = 'form-array-item';
+            ipDiv.innerHTML = `
+                <input type="text" name="security.ip_whitelist[${ipCount}]" class="form-control" placeholder="IP address (e.g., 192.168.1.100)">
+                <button type="button" class="btn btn-danger remove-ip">Remove</button>
+            `;
+            container.appendChild(ipDiv);
+            
+            // Add event listener for remove button
+            ipDiv.querySelector('.remove-ip').addEventListener('click', function() {
+                this.parentElement.remove();
+            });
+        });
+        
+        // Add existing sidebar panels to the form
+        const sidebarPanels = {{ config.layout.sidebar | tojson }};
+        if (sidebarPanels && Array.isArray(sidebarPanels)) {
+            const container = document.getElementById('sidebarPanels');
+            sidebarPanels.forEach((panel, index) => {
+                const panelDiv = document.createElement('div');
+                panelDiv.className = 'form-array-item';
+                panelDiv.innerHTML = `
+                    <input type="text" name="layout.sidebar[${index}]" class="form-control" value="${panel}">
+                    <button type="button" class="btn btn-danger remove-panel">Remove</button>
+                `;
+                container.insertBefore(panelDiv, document.getElementById('addSidebarPanel'));
+            });
+        }
+        
+        // Add existing IP whitelist to the form
+        const ipWhitelist = {{ config.security.ip_whitelist | tojson }};
+        if (ipWhitelist && Array.isArray(ipWhitelist)) {
+            const container = document.getElementById('ipWhitelist');
+            ipWhitelist.forEach((ip, index) => {
+                const ipDiv = document.createElement('div');
+                ipDiv.className = 'form-array-item';
+                ipDiv.innerHTML = `
+                    <input type="text" name="security.ip_whitelist[${index}]" class="form-control" value="${ip}">
+                    <button type="button" class="btn btn-danger remove-ip">Remove</button>
+                `;
+                container.appendChild(ipDiv);
+            });
+        }
+        
+        // Add event listeners for remove buttons
+        document.querySelectorAll('.remove-panel').forEach(button => {
+            button.addEventListener('click', function() {
+                this.parentElement.remove();
+            });
+        });
+        
+        document.querySelectorAll('.remove-ip').forEach(button => {
+            button.addEventListener('click', function() {
+                this.parentElement.remove();
+            });
+        });
+        
+        // Cancel button
+        document.getElementById('cancelBtn').addEventListener('click', function() {
+            window.location.href = '/admin';
+        });
+        
+        // Form submission
+        document.getElementById('configForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Build the configuration object from the form
+            const formData = new FormData(this);
+            const config = {};
+            
+            // Process form data to build nested configuration object
+            for (let [key, value] of formData.entries()) {
+                // Handle nested properties like 'layout.main_view'
+                const parts = key.split('.');
+                let current = config;
+                
+                for (let i = 0; i < parts.length - 1; i++) {
+                    if (!current[parts[i]]) {
+                        current[parts[i]] = {};
+                    }
+                    current = current[parts[i]];
+                }
+                
+                // Handle array fields like 'layout.sidebar[0]'
+                if (parts[parts.length - 1].includes('[') && parts[parts.length - 1].includes(']')) {
+                    const arrayMatch = parts[parts.length - 1].match(/(.*?)\[(\d+)\]/);
+                    if (arrayMatch) {
+                        const fieldName = arrayMatch[1];
+                        const index = parseInt(arrayMatch[2]);
+                        
+                        if (!current[fieldName]) {
+                            current[fieldName] = [];
+                        }
+                        
+                        // Handle checkbox arrays
+                        if (current[fieldName][index] && Array.isArray(current[fieldName][index])) {
+                            current[fieldName][index].push(value);
+                        } else {
+                            current[fieldName][index] = value;
+                        }
+                    }
+                } else {
+                    // Handle single values
+                    current[parts[parts.length - 1]] = value;
+                }
+            }
+            
+            // Process arrays properly (flatten array fields)
+            for (let [key, value] of formData.entries()) {
+                if (key.includes('[') && key.includes(']')) {
+                    const arrayMatch = key.match(/(.*?)\[(\d+)\]/);
+                    if (arrayMatch) {
+                        const baseName = arrayMatch[1];
+                        const fullKey = key.split('[')[0];
+                        
+                        // Get all values for this array
+                        const arrayValues = [];
+                        for (let [arrKey, arrValue] of formData.entries()) {
+                            if (arrKey.startsWith(fullKey + '[')) {
+                                const index = parseInt(arrKey.match(/\[(\d+)\]/)[1]);
+                                arrayValues[index] = arrValue;
+                            }
+                        }
+                        
+                        // Remove empty values at the end
+                        while (arrayValues.length > 0 && arrayValues[arrayValues.length - 1] === '') {
+                            arrayValues.pop();
+                        }
+                        
+                        // Set the array value in the config
+                        let current = config;
+                        const parts = fullKey.split('.');
+                        for (let i = 0; i < parts.length - 1; i++) {
+                            if (!current[parts[i]]) {
+                                current[parts[i]] = {};
+                            }
+                            current = current[parts[i]];
+                        }
+                        current[baseName] = arrayValues.filter(val => val !== '');
+                    }
+                }
+            }
+            
+            // Handle checkboxes
+            const checkboxes = this.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                if (!formData.has(checkbox.name)) {
+                    // If checkbox is not checked, explicitly set to false
+                    let current = config;
+                    const parts = checkbox.name.split('.');
+                    for (let i = 0; i < parts.length - 1; i++) {
+                        if (!current[parts[i]]) {
+                            current[parts[i]] = {};
+                        }
+                        current = current[parts[i]];
+                    }
+                    current[parts[parts.length - 1]] = false;
+                }
+            });
+            
+            // Make sure the sidebar array is properly formed
+            if (!config.layout) config.layout = {};
+            if (formData.getAll('layout.sidebar[0]').length > 0) {
+                const sidebarPanels = [];
+                let idx = 0;
+                while (true) {
+                    const panelValue = formData.get(`layout.sidebar[${idx}]`);
+                    if (panelValue === undefined || panelValue === null) break;
+                    if (panelValue.trim() !== '') sidebarPanels.push(panelValue);
+                    idx++;
+                }
+                config.layout.sidebar = sidebarPanels;
+            }
+            
+            // Same for IP whitelist
+            if (!config.security) config.security = {};
+            const ipWhitelist = [];
+            let ipIdx = 0;
+            while (true) {
+                const ipValue = formData.get(`security.ip_whitelist[${ipIdx}]`);
+                if (ipValue === undefined || ipValue === null) break;
+                if (ipValue.trim() !== '') ipWhitelist.push(ipValue);
+                ipIdx++;
+            }
+            config.security.ip_whitelist = ipWhitelist;
+            
+            // Send the updated config
+            fetch('/api/admin/config', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(config)
+            })
+            .then(response => response.json())
+            .then(data => {
+                const alert = document.getElementById('alertMessage');
+                if (data.status === 'success') {
+                    alert.className = 'alert alert-success';
+                    alert.textContent = data.message;
+                    alert.style.display = 'block';
+                    
+                    // Hide the alert after 5 seconds
+                    setTimeout(() => {
+                        alert.style.display = 'none';
+                    }, 5000);
+                } else {
+                    alert.className = 'alert alert-error';
+                    alert.textContent = data.message;
+                    alert.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Save config error:', error);
+                const alert = document.getElementById('alertMessage');
+                alert.className = 'alert alert-error';
+                alert.textContent = 'Error saving configuration: ' + error;
+                alert.style.display = 'block';
+            });
+        });
+    </script>
+</body>
+</html>

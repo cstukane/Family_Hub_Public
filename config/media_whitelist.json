@@ -1,0 +1,22 @@
+{
+  "allowed_domains": [
+    "youtube.com",
+    "youtu.be",
+    "twitch.tv",
+    "pluto.tv",
+    "roku.com",
+    "roku.tv",
+    "vimeo.com",
+    "dailymotion.com",
+    "tubitv.com",
+    "spotify.com",
+    "disneyplus.com",
+    "max.com",
+    "espn.com",
+    "photos.google.com",
+    "google.com",
+    "therokuchannel.roku.com"
+  ],
+  "updated_at": "2025-11-07T00:00:00Z",
+  "version": "1.0"
+}

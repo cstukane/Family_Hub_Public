@@ -1,0 +1,15 @@
+<div class="panel chore-fragment" id="chores-panel" role="region" aria-labelledby="chores-title">
+    <div class="panel-header" role="heading" aria-level="2" id="chores-title">
+        <h2 class="panel-title">Chores <span id="chores-count" class="badge badge-secondary">0</span></h2>
+    </div>
+    <div class="panel-content">
+        <div id="chores-list" hx-get="/api/chores?completed=false" hx-trigger="load, every 5m" hx-swap="innerHTML">
+            <p>Loading chores...</p>
+        </div>
+        <div class="chore-controls mt-3">
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="loadAndShowModal('/partials/chore-modal')">
+                Manage Chores
+            </button>
+        </div>
+    </div>
+</div>

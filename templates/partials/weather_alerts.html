@@ -1,0 +1,84 @@
+<div class="weather-alerts-widget">
+  <h3>Weather Alerts</h3>
+  
+  <div id="current-weather-severity" hx-get="/api/weather-alerts/severity" hx-trigger="load, every 5m" hx-swap="innerHTML">
+    <p>Loading weather severity...</p>
+  </div>
+  
+  <div id="active-alerts" hx-get="/api/weather-alerts" hx-trigger="load, every 10m" hx-swap="innerHTML">
+    <p>Loading active alerts...</p>
+  </div>
+  
+  <div class="weather-alert-actions">
+    <button class="btn btn-secondary" hx-post="/api/weather-alerts/check" hx-target="#active-alerts" hx-swap="innerHTML">
+      Manually Check Alerts
+    </button>
+  </div>
+  
+  <div id="weather-history-container" style="margin-top: 20px;">
+    <h4>Recent Weather Alerts</h4>
+    <div id="weather-history" hx-get="/api/weather-alerts/history?hours=24" hx-trigger="load, weather-alerts-updated from:body" hx-swap="innerHTML">
+      <p>Loading weather history...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Refresh weather alerts when a weather event occurs
+  document.addEventListener('weather-alerts-updated', function(e) {
+    // Refresh the weather alerts view
+    document.getElementById('active-alerts').dispatchEvent(new Event('load'));
+    document.getElementById('weather-history').dispatchEvent(new Event('load'));
+  });
+</script>
+
+<style>
+  .weather-alerts-widget {
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    margin-bottom: 15px;
+  }
+  
+  .weather-severity-high {
+    border-left: 4px solid #dc3545; /* Red for high severity */
+    background-color: #ffe6e6;
+  }
+  
+  .weather-severity-medium {
+    border-left: 4px solid #ffc107; /* Yellow for medium severity */
+    background-color: #fff8e6;
+  }
+  
+  .weather-severity-normal {
+    border-left: 4px solid #28a745; /* Green for normal */
+    background-color: #e6f5e6;
+  }
+  
+  .alert-item {
+    border: 1px solid #eee;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+  }
+  
+  .alert-type {
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+  
+  .alert-severity-high {
+    color: #dc3545;
+  }
+  
+  .alert-severity-medium {
+    color: #ffc107;
+  }
+  
+  .alert-time {
+    font-size: 0.8em;
+    color: #666;
+    margin-top: 5px;
+  }
+</style>

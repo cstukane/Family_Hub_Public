@@ -1,0 +1,489 @@
+<!-- 
+Template Guard: Headline-Only Display Contract
+This template strictly enforces headline-only data display (no play-by-play strings).
+Only basic game information is rendered: scores, team names/abbreviations, and time.
+Any detailed content from API responses is filtered out during data processing.
+Status tags have been replaced with color-coded game boxes.
+Start times are only shown for scheduled games.
+This template now updates via JSON data updates to reduce DOM footprint and avoid full HTML swaps.
+Seamless scrolling is maintained through duplicated content as required.
+-->
+{% if config and config.features and config.features.sports_ticker_enabled|default(true) %}
+    {% if sports_data %}
+        {% if sports_data.meta and sports_data.meta.should_hide and sports_data.meta.consecutive_empty_count >= 3 %}
+            <!-- Ticker is hidden due to 3 or more consecutive empty refreshes -->
+        {% else %}
+            {% if sports_data and sports_data.games %}
+            <div class="sports-horizontal-ticker sports-fragment" id="sports-horizontal-ticker" data-sports-json="{{ sports_data | tojson }}" role="marquee" aria-label="Sports ticker with scrolling game updates">
+                <div class="ticker-container">
+                    <div class="ticker-content" aria-hidden="true" id="ticker-content">
+                        <!-- Content will be dynamically populated by JavaScript from JSON data -->
+                    </div>
+                </div>
+            {% elif config and config.features and config.features.sports_ticker_mock_mode|default(false) %}
+            <!-- Show ticker with mock data when in mock mode -->
+            <div class="sports-horizontal-ticker sports-fragment" id="sports-horizontal-ticker" data-sports-json="{{ sports_data | tojson }}" role="marquee" aria-label="Sports ticker with scrolling game updates">
+                <div class="ticker-container">
+                    <div class="ticker-content" aria-hidden="true" id="ticker-content">
+                        <!-- Content will be dynamically populated by JavaScript from JSON data -->
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <!-- Show empty ticker with mock data to maintain layout -->
+            <div class="sports-horizontal-ticker sports-fragment" id="sports-horizontal-ticker" role="marquee" aria-label="Sports ticker with scrolling game updates">
+                <div class="ticker-container">
+                    <div class="ticker-content" aria-hidden="true">
+                        <!-- Original content - demonstrating graceful handling of missing data -->
+                        <div class="ticker-item game-scheduled">
+                            <span class="ticker-sport-icon" aria-hidden="true">NBA</span>
+                            <span class="ticker-clock" aria-hidden="true">7:30 PM</span>
+                            <span class="ticker-teams" aria-hidden="true">
+                                <span class="ticker-team ticker-team-away">LAL</span>
+                                <span class="ticker-score">VS</span>
+                                <span class="ticker-team ticker-team-home">GSW</span>
+                            </span>
+                        </div>
+                        <span class="ticker-separator" aria-hidden="true">|</span>
+                        
+                        <div class="ticker-item game-in_progress">
+                            <span class="ticker-sport-icon" aria-hidden="true">NBA</span>
+                            <span class="ticker-clock" aria-hidden="true">Q3 8:42</span>
+                            <span class="ticker-teams" aria-hidden="true">
+                                <span class="ticker-team ticker-team-away">BKN</span>
+                                <span class="ticker-score">89 - 84</span>
+                                <span class="ticker-team ticker-team-home">MIA</span>
+                            </span>
+                        </div>
+                        <span class="ticker-separator" aria-hidden="true">|</span>
+                        
+                        <div class="ticker-item game-final">
+                            <span class="ticker-sport-icon" aria-hidden="true">NBA</span>
+                            <span class="ticker-teams" aria-hidden="true">
+                                <span class="ticker-team ticker-team-away">LAL</span>
+                                <span class="ticker-score">112 - 108</span>
+                                <span class="ticker-team ticker-team-home">PHX</span>
+                            </span>
+                        </div>
+                        <span class="ticker-separator" aria-hidden="true">|</span>
+                        
+                        <div class="ticker-item game-scheduled">
+                            <span class="ticker-sport-icon" aria-hidden="true">NBA</span>
+                            <span class="ticker-clock" aria-hidden="true">10:00 PM</span>
+                            <span class="ticker-teams" aria-hidden="true">
+                                <span class="ticker-team ticker-team-away">BOS</span>
+                                <span class="ticker-score">VS</span>
+                                <span class="ticker-team ticker-team-home">MIL</span>
+                            </span>
+                        </div>
+                        <span class="ticker-separator" aria-hidden="true">|</span>
+                        
+                        <!-- Duplicate content for seamless loop -->
+                        <div class="ticker-item game-scheduled">
+                            <span class="ticker-sport-icon" aria-hidden="true">NBA</span>
+                            <span class="ticker-clock" aria-hidden="true">7:30 PM</span>
+                            <span class="ticker-teams" aria-hidden="true">
+                                <span class="ticker-team ticker-team-away">LAL</span>
+                                <span class="ticker-score">VS</span>
+                                <span class="ticker-team ticker-team-home">GSW</span>
+                            </span>
+                        </div>
+                        <span class="ticker-separator" aria-hidden="true">|</span>
+                        
+                        <div class="ticker-item game-in_progress">
+                            <span class="ticker-sport-icon" aria-hidden="true">NBA</span>
+                            <span class="ticker-clock" aria-hidden="true">Q3 8:42</span>
+                            <span class="ticker-teams" aria-hidden="true">
+                                <span class="ticker-team ticker-team-away">BKN</span>
+                                <span class="ticker-score">89 - 84</span>
+                                <span class="ticker-team ticker-team-home">MIA</span>
+                            </span>
+                        </div>
+                        <span class="ticker-separator" aria-hidden="true">|</span>
+                        
+                        <div class="ticker-item game-final">
+                            <span class="ticker-sport-icon" aria-hidden="true">NBA</span>
+                            <span class="ticker-teams" aria-hidden="true">
+                                <span class="ticker-team ticker-team-away">LAL</span>
+                                <span class="ticker-score">112 - 108</span>
+                                <span class="ticker-team ticker-team-home">PHX</span>
+                            </span>
+                        </div>
+                        <span class="ticker-separator" aria-hidden="true">|</span>
+                        
+                        <div class="ticker-item game-scheduled">
+                            <span class="ticker-sport-icon" aria-hidden="true">NBA</span>
+                            <span class="ticker-clock" aria-hidden="true">10:00 PM</span>
+                            <span class="ticker-teams" aria-hidden="true">
+                                <span class="ticker-team ticker-team-away">BOS</span>
+                                <span class="ticker-score">VS</span>
+                                <span class="ticker-team ticker-team-home">MIL</span>
+                            </span>
+                        </div>
+                        <span class="ticker-separator" aria-hidden="true">|</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        {% endif %}
+    {% endif %}
+{% endif %}
+
+<style>
+.sports-horizontal-ticker {
+    position: relative;
+    width: 100%;
+    height: 48px;
+    background-color: #09090c;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+.ticker-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+}
+
+.ticker-content {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    gap: 14px;
+    padding: 0 20px;
+    animation: ticker-scroll var(--ticker-duration, 42s) linear infinite;
+    will-change: transform;
+}
+
+.ticker-content > * {
+    flex: 0 0 auto;
+}
+
+.ticker-item, .ticker-separator {
+    flex-shrink: 0;
+}
+
+.ticker-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 10px;
+    margin: 0;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    min-width: auto;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+    background-color: color-mix(in srgb, #101823 94%, transparent);
+    border: 1px solid rgba(149, 173, 198, 0.1);
+    color: var(--text-color);
+}
+
+/* Status-specific color coding — accent border only for readability,
+   tuned to the redesign's teal/dark palette rather than stock red/green */
+.ticker-item.game-in_progress {
+    background-color: color-mix(in srgb, #0f1822 82%, var(--primary-color));
+    border: 1px solid color-mix(in srgb, var(--primary-color) 50%, rgba(149, 173, 198, 0.12));
+}
+
+.ticker-item.game-scheduled {
+    background-color: color-mix(in srgb, #0f1822 94%, transparent);
+}
+
+.ticker-item.game-final {
+    background-color: color-mix(in srgb, #0c131c 90%, transparent);
+    opacity: 0.76;
+}
+
+.ticker-clock {
+    background: color-mix(in srgb, var(--primary-color) 90%, #03121a);
+    color: #03121a;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-right: 1px;
+    text-transform: uppercase;
+}
+
+.ticker-item.game-final .ticker-clock,
+.ticker-item.game-scheduled .ticker-clock {
+    background: transparent;
+    color: var(--text-color-secondary);
+    padding: 0;
+}
+
+.ticker-sport-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: color-mix(in srgb, #091019 78%, var(--primary-color));
+    border: 1px solid rgba(149, 173, 198, 0.1);
+    color: var(--text-color-secondary);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.ticker-teams {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 700;
+}
+
+.ticker-team {
+    min-width: 32px;
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.ticker-team-away {
+    color: inherit;
+}
+
+.ticker-team-home {
+    color: inherit;
+}
+
+.ticker-score {
+    min-width: 40px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.82rem;
+}
+
+.ticker-time {
+    color: var(--text-color-secondary);
+    font-size: 0.78rem;
+    margin-left: 4px;
+}
+
+.ticker-separator {
+    margin: 0 2px;
+    color: color-mix(in srgb, var(--border-color) 72%, transparent);
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    opacity: 0.32;
+}
+
+@keyframes ticker-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(calc(-1 * var(--ticker-distance, 50%))); }
+}
+
+/* Pause animation on hover */
+.sports-horizontal-ticker:hover .ticker-content {
+    animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sports-horizontal-ticker .ticker-content {
+        animation: none;
+        transform: none;
+    }
+}
+
+.ticker-content.ticker-static {
+    animation: none;
+    transform: none;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+</style>
+
+<script>
+// Initialize the ticker content from JSON data when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializeTickerFromJson();
+});
+
+// Also initialize when HTMX swaps content
+if (window.htmx) {
+    htmx.on('htmx:afterSwap', function(evt) {
+        if (evt.target &&
+            ((evt.target.id === 'sports-horizontal-ticker') ||
+             (evt.target.querySelector && evt.target.querySelector('#sports-horizontal-ticker')))) {
+            initializeTickerFromJson();
+        }
+    });
+}
+
+function initializeTickerFromJson() {
+    const tickerElement = document.getElementById('sports-horizontal-ticker');
+    if (!tickerElement || !tickerElement.dataset.sportsJson) {
+        return;
+    }
+
+    try {
+        // Get sports data from the data attribute
+        const sportsData = JSON.parse(tickerElement.dataset.sportsJson);
+        const tickerContent = document.getElementById('ticker-content');
+
+        if (!sportsData || !sportsData.games || (sportsData.meta && sportsData.meta.should_hide)) {
+            if (tickerContent) tickerContent.innerHTML = '';
+            return;
+        }
+
+        const games = sportsData.games;
+
+        // --- In-place update: if same game IDs in same order, only update scores/clocks ---
+        if (tickerContent) {
+            const existingItems = Array.from(tickerContent.querySelectorAll('.ticker-item[data-game-id]'));
+            // Only look at first half (the original set, not duplicates)
+            const numCopiesStored = parseInt(tickerContent.dataset.tickerCopies || '2');
+            const setSize = existingItems.length / numCopiesStored;
+            const firstSetItems = existingItems.slice(0, setSize > 0 ? Math.round(setSize) : existingItems.length);
+            const existingIds = firstSetItems.map(el => el.dataset.gameId);
+            const newIds = games.map(g => g.id || '');
+
+            if (existingIds.length > 0 && existingIds.join(',') === newIds.join(',')) {
+                // Same games — update scores and clocks in-place without touching animation
+                games.forEach((game, idx) => {
+                    const status = (game.status || 'scheduled').toLowerCase();
+                    const awayScore = (game.away_score != null) ? game.away_score : '--';
+                    const homeScore = (game.home_score != null) ? game.home_score : '--';
+                    const scoreDisplay = (status === 'in_progress' || status === 'final')
+                        ? `${awayScore} - ${homeScore}` : 'VS';
+                    const liveContext = game.time_remaining || game.quarter || '';
+                    const timeRemaining = liveContext || 'LIVE';
+
+                    // Update all copies (each set has the same index offset)
+                    for (let copy = 0; copy < numCopiesStored; copy++) {
+                        const item = existingItems[copy * Math.round(setSize) + idx];
+                        if (!item) continue;
+                        const scoreEl = item.querySelector('.ticker-score');
+                        if (scoreEl) scoreEl.textContent = scoreDisplay;
+                        const clockEl = item.querySelector('.ticker-clock');
+                        if (clockEl && (status === 'in_progress' || liveContext)) clockEl.textContent = timeRemaining;
+                    }
+                });
+                return; // Animation continues uninterrupted
+            }
+        }
+
+        // --- Full rebuild (game list changed) ---
+        const containerWidth = document.querySelector('.ticker-container')?.clientWidth || 1920;
+        const estimatedSetWidth = Math.max(games.length * 200, 200);
+        const numCopies = Math.max(2, Math.ceil((containerWidth * 2.2) / estimatedSetWidth));
+
+        let tickerContentHtml = '';
+        for (let i = 0; i < numCopies; i++) {
+            games.forEach(game => { tickerContentHtml += generateGameHtml(game); });
+        }
+
+        if (tickerContent) {
+            tickerContent.innerHTML = tickerContentHtml;
+            tickerContent.dataset.tickerCopies = String(numCopies);
+            tickerContent.classList.remove('ticker-static');
+            tickerContent.style.removeProperty('animation');
+        }
+
+        // Trigger ticker metrics recalculation
+        const existingFragment = tickerElement.__sportsTickerFragment;
+        if (existingFragment && typeof existingFragment.applyTickerMetrics === 'function') {
+            existingFragment.applyTickerMetrics();
+        }
+    } catch (e) {
+        console.error('Error initializing ticker from JSON:', e);
+    }
+}
+
+function generateGameHtml(game) {
+    // Generate the HTML for a single game item
+    const safeGame = game || {};
+    const awayTeam = safeGame.away_team || {};
+    const homeTeam = safeGame.home_team || {};
+    const status = (safeGame.status || 'scheduled').toLowerCase();
+
+    let clockHtml = '';
+    const liveContext = safeGame.time_remaining || safeGame.quarter || '';
+    if (status === 'in_progress' || liveContext) {
+        const timeRemaining = liveContext || 'LIVE';
+        clockHtml = `<span class="ticker-clock" aria-hidden="true">${timeRemaining}</span>`;
+    } else if (status === 'scheduled' && (safeGame.start_time || safeGame.start_time_utc)) {
+        // Format time - simplified version for client side
+        try {
+            const startDt = new Date(safeGame.start_time || safeGame.start_time_utc);
+            const formattedTime = startDt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const formattedDate = startDt.toLocaleDateString([], {month: 'numeric', day: 'numeric'});
+
+            if (safeGame.show_start_date) {
+                clockHtml = `<span class="ticker-clock" aria-hidden="true">${formattedDate} ${formattedTime}</span>`;
+            } else {
+                clockHtml = `<span class="ticker-clock" aria-hidden="true">${formattedTime}</span>`;
+            }
+        } catch (e) {
+            // If conversion fails, skip the time display
+        }
+    }
+
+    // Sport icon based on league
+    let sportIcon = '';
+    if (safeGame.league) {
+        const leagueLower = String(safeGame.league).toLowerCase();
+        let iconText = 'SPORT';
+
+        if (leagueLower === 'nba' || leagueLower.includes('basketball')) {
+            iconText = 'NBA';
+        } else if (leagueLower === 'nfl' || leagueLower.includes('football')) {
+            iconText = 'NFL';
+        } else if (leagueLower === 'mlb' || leagueLower.includes('baseball')) {
+            iconText = 'MLB';
+        } else if (leagueLower === 'nhl' || leagueLower.includes('hockey')) {
+            iconText = 'NHL';
+        }
+
+        sportIcon = `<span class="ticker-sport-icon" aria-label="${safeGame.league} game" style="margin-right: 4px;">${iconText}</span>`;
+    }
+
+    // Team abbreviations (fallback to first 3 chars of name)
+    const awayAbbrev = awayTeam.abbreviation || (awayTeam.name && awayTeam.name.substring(0, 3)) || 'AWAY';
+    const homeAbbrev = homeTeam.abbreviation || (homeTeam.name && homeTeam.name.substring(0, 3)) || 'HOME';
+
+    // Score display
+    let scoreDisplay = 'VS';
+    if (status === 'in_progress' || status === 'final') {
+        const awayScore = (safeGame.away_score != null && safeGame.away_score !== undefined) ? safeGame.away_score : '--';
+        const homeScore = (safeGame.home_score != null && safeGame.home_score !== undefined) ? safeGame.home_score : '--';
+        scoreDisplay = `${awayScore} - ${homeScore}`;
+    }
+
+    // Click handler for clickable ticker items
+    let clickHandler = '';
+    if (window.currentConfig && window.currentConfig.features && window.currentConfig.features.sports_ticker_clickable && safeGame.source_url) {
+        clickHandler = `onclick="window.open('${safeGame.source_url}', '_blank')" style="cursor: pointer;"`;
+    } else if (typeof config !== 'undefined' && config && config.features && config.features.sports_ticker_clickable && safeGame.source_url) {
+        clickHandler = `onclick="window.open('${safeGame.source_url}', '_blank')" style="cursor: pointer;"`;
+    }
+
+    // Build the HTML
+    return `
+        <div class="ticker-item game-${status}" data-game-id="${safeGame.id || ''}" ${clickHandler}>
+            ${sportIcon}
+            ${clockHtml}
+            <span class="ticker-teams" aria-hidden="true">
+                <span class="ticker-team ticker-team-away">${awayAbbrev}</span>
+                <span class="ticker-score">${scoreDisplay}</span>
+                <span class="ticker-team ticker-team-home">${homeAbbrev}</span>
+            </span>
+        </div>
+        <span class="ticker-separator" aria-hidden="true">|</span>
+    `;
+}
+
+window.initializeTickerFromJson = initializeTickerFromJson;</script>

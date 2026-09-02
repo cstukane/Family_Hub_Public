@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ config.ui.theme if config and config.ui.theme else 'auto' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Admin panel for Family Hub - Configuration, system management, and diagnostics">
+    <title>Admin Panel - Family Hub</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <script src="https://unpkg.com/htmx.org@1.8.4"></script>
+    <style>
+        .admin-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            grid-template-rows: auto 1fr;
+            min-height: 100vh;
+        }
+        
+        .admin-sidebar {
+            grid-column: 1 / 2;
+            grid-row: 2 / 3;
+            background-color: var(--surface-color);
+            border-right: 1px solid var(--border-color);
+            padding: 1rem;
+        }
+        
+        .admin-content {
+            grid-column: 2 / 3;
+            grid-row: 2 / 3;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        
+        .admin-header {
+            grid-column: 1 / -1;
+            grid-row: 1 / 2;
+            background-color: var(--surface-color);
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .admin-nav {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .admin-nav li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .admin-nav a {
+            display: block;
+            padding: 0.75rem;
+            text-decoration: none;
+            color: var(--text-color);
+            border-radius: var(--border-radius);
+            transition: background-color 0.2s;
+        }
+        
+        .admin-nav a:hover, .admin-nav a.active {
+            background-color: color-mix(in srgb, var(--primary-color) 20%, transparent);
+        }
+        
+        .admin-logout {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .admin-panel-title {
+            margin-bottom: 1.5rem;
+            color: var(--text-color);
+        }
+        
+        .admin-card {
+            background: var(--background-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+        
+        .admin-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .admin-card-title {
+            margin: 0;
+            font-size: var(--font-size-large);
+        }
+        
+        .admin-section {
+            margin-bottom: 2rem;
+        }
+        
+        .admin-dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .admin-status-item {
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background-color: var(--surface-color);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        
+        .status-good {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .status-warning {
+            background-color: var(--warning-color);
+            color: white;
+        }
+        
+        .status-error {
+            background-color: var(--error-color);
+            color: white;
+        }
+        
+        .admin-btn {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background-color: var(--primary-color);
+            color: white;
+            text-decoration: none;
+            border-radius: var(--border-radius);
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .admin-btn:hover {
+            opacity: 0.9;
+        }
+        
+        .admin-btn-danger {
+            background-color: var(--error-color);
+        }
+        
+        .admin-btn-success {
+            background-color: var(--success-color);
+        }
+        
+        .admin-btn-warning {
+            background-color: var(--warning-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Admin header -->
+        <header class="admin-header">
+            <h1>Family Hub Admin Panel</h1>
+            <button id="logoutBtn" class="admin-btn admin-btn-danger">Logout</button>
+        </header>
+        
+        <!-- Admin sidebar -->
+        <aside class="admin-sidebar">
+            <ul class="admin-nav">
+                <li><a href="/admin" class="active">Dashboard</a></li>
+                <li><a href="/admin/config">Configuration</a></li>
+                <li><a href="/admin/plugins">Plugins</a></li>
+                <li><a href="/admin/system">System Info</a></li>
+                <li><a href="/admin/diagnostics">Diagnostics</a></li>
+                <li><a href="/admin/backup">Backups</a></li>
+                <li><a href="/admin/updates">Updates</a></li>
+                <li><a href="/">← Back to Dashboard</a></li>
+            </ul>
+            
+            <div class="admin-logout">
+                <button id="logoutBtnSidebar" class="admin-btn admin-btn-danger btn-block">Logout</button>
+            </div>
+        </aside>
+        
+        <!-- Admin content -->
+        <main class="admin-content" id="adminContent">
+            <!-- Admin dashboard content will be loaded here -->
+            <div class="admin-dashboard">
+                <h2 class="admin-panel-title">Admin Dashboard</h2>
+                
+                <div class="admin-dashboard-grid">
+                    <div class="admin-status-item">
+                        <h3>System Health</h3>
+                        <div id="systemHealthStatus">Use /health for status</div>
+                    </div>
+                    
+                    <div class="admin-status-item">
+                        <h3>Configuration</h3>
+                        <p>Manage Family Hub settings</p>
+                        <a href="/admin/config" class="admin-btn">Configure</a>
+                    </div>
+                    
+                    <div class="admin-status-item">
+                        <h3>Backups</h3>
+                        <p>Manage system backups</p>
+                        <a href="/admin/backup" class="admin-btn">Manage Backups</a>
+                    </div>
+                    
+                    <div class="admin-status-item">
+                        <h3>Diagnostics</h3>
+                        <p>Run system diagnostics</p>
+                        <a href="/admin/diagnostics" class="admin-btn">Run Diagnostics</a>
+                    </div>
+                </div>
+                
+                <div class="admin-card">
+                    <div class="admin-card-header">
+                        <h3 class="admin-card-title">Quick Actions</h3>
+                    </div>
+                    <div class="admin-card-content">
+                        <button id="createBackup" class="admin-btn">Create Backup</button>
+                    </div>
+                </div>
+                
+                <div class="admin-card">
+                    <div class="admin-card-header">
+                        <h3 class="admin-card-title">Recent Activity</h3>
+                    </div>
+                    <div class="admin-card-content">
+                        <div id="recentActivity">Loading recent activity...</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        // Logout functionality
+        function logout() {
+            fetch('/api/admin/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                window.location.href = '/admin/login';
+            })
+            .catch(error => {
+                console.error('Logout error:', error);
+                window.location.href = '/admin/login';
+            });
+        }
+        
+        // Add event listeners to logout buttons
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+        document.getElementById('logoutBtnSidebar').addEventListener('click', logout);
+        
+        // Create backup
+        document.getElementById('createBackup').addEventListener('click', function() {
+            const backupName = prompt('Enter backup name (optional):');
+            fetch('/api/admin/backup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: backupName || null })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Backup created successfully: ' + data.path);
+                } else {
+                    alert('Error creating backup: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Backup creation error:', error);
+                alert('Error creating backup');
+            });
+        });
+        
+        // Load recent activity
+        function loadRecentActivity() {
+            document.getElementById('recentActivity').innerHTML = '<p>No recent activity logged.</p>';
+        }
+        
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRecentActivity();
+        });
+    </script>
+</body>
+</html>

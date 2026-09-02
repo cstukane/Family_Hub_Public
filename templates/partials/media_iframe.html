@@ -1,0 +1,34 @@
+<div class="panel" role="region" aria-labelledby="media-panel-title">
+    <div class="panel-header" role="heading" aria-level="2" id="media-panel-title">
+        <h2 class="panel-title">Media</h2>
+    </div>
+    
+    <div class="media-iframe-container" role="application" aria-label="Media content">
+        <iframe 
+            id="media-iframe" 
+            src="{{ current_url if current_url else 'https://www.youtube.com/' }}" 
+            width="100%" 
+            height="500px" 
+            frameborder="0" 
+            title="Media content iframe"
+            allowfullscreen
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            aria-label="Media content display">
+        </iframe>
+    </div>
+    
+    <div class="media-controls" role="toolbar" aria-label="Media application controls">
+        {% for app in config.apps if config %}
+            {% if app.action == 'open_iframe' and app.url %}
+                <button class="btn" 
+                        hx-get="/partials/media" 
+                        hx-vals='{"url": "{{ app.url }}"}'
+                        hx-target="#main-content"
+                        hx-swap="innerHTML"
+                        aria-label="Open {{ app.label }} in media panel">
+                    {{ app.label }}
+                </button>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>

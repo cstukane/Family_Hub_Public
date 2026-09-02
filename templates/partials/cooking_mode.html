@@ -1,0 +1,179 @@
+<div class="panel cooking-mode" role="region" aria-labelledby="cooking-mode-title">
+    <div class="panel-header" role="heading" aria-level="2" id="cooking-mode-title">
+        <h2 class="panel-title">Cooking Mode</h2>
+    </div>
+    
+    <div class="cooking-content">
+        <!-- Recipe section -->
+        <div class="recipe-section" role="region" aria-labelledby="recipe-title">
+            <h3 id="recipe-title">Perfect Pasta Carbonara</h3>
+            <div class="recipe-meta" role="region" aria-label="Recipe timing information">
+                <div class="recipe-time">
+                    <span class="time-icon" aria-hidden="true"></span>
+                    <span class="time-value">Prep: 10 min | Cook: 15 min</span>
+                </div>
+            </div>
+            
+            <div class="recipe-controls" role="toolbar" aria-label="Recipe controls">
+                <button class="btn btn-large" 
+                        hx-get="/partials/media?url=https://www.youtube.com/embed/rLdDhJmI1HY" 
+                        hx-target="#cooking-iframe" 
+                        hx-swap="outerHTML"
+                        onclick="document.getElementById('cooking-iframe').src='https://www.youtube.com/embed/rLdDhJmI1HY'"
+                        aria-label="Show recipe video">
+                    <span class="btn-icon" aria-hidden="true"></span> Show Video
+                </button>
+                <button class="btn btn-large" hx-post="/api/ingredients-to-shopping" hx-target="#alerts-container" hx-swap="innerHTML" aria-label="Add recipe ingredients to shopping list">
+                    <span class="btn-icon" aria-hidden="true"></span> Add Ingredients to Shopping
+                </button>
+            </div>
+            
+            <div class="recipe-ingredients" role="region" aria-label="Recipe ingredients">
+                <h4>Ingredients:</h4>
+                <ul role="list" aria-label="Ingredients list">
+                    <li role="listitem"><input type="checkbox" aria-label="400g spaghetti"> 400g spaghetti</li>
+                    <li role="listitem"><input type="checkbox" aria-label="200g pancetta or bacon"> 200g pancetta or bacon</li>
+                    <li role="listitem"><input type="checkbox" aria-label="4 large eggs"> 4 large eggs</li>
+                    <li role="listitem"><input type="checkbox" aria-label="100g Pecorino Romano cheese, grated"> 100g Pecorino Romano cheese, grated</li>
+                    <li role="listitem"><input type="checkbox" aria-label="Freshly ground black pepper"> Freshly ground black pepper</li>
+                </ul>
+            </div>
+            
+            <div class="recipe-steps" role="region" aria-label="Recipe steps">
+                <h4>Steps:</h4>
+                <ol role="list" aria-label="Recipe steps">
+                    <li role="listitem">Bring a large pot of salted water to boil. Add spaghetti and cook until al dente.</li>
+                    <li role="listitem">Fry pancetta in a large pan until crispy. Remove from heat.</li>
+                    <li role="listitem">Whisk eggs and cheese together. When pasta is done, add to pan with pancetta, then add egg mixture.</li>
+                    <li role="listitem">Stir quickly to coat pasta without scrambling eggs. Add pasta water if needed.</li>
+                    <li role="listitem">Season with black pepper and serve immediately.</li>
+                </ol>
+            </div>
+        </div>
+        
+        <!-- Large media iframe for cooking videos -->
+        <div class="cooking-media-container" role="complementary" aria-label="Video player">
+            <div class="panel media-panel" role="region" aria-labelledby="video-panel-title">
+                <div class="panel-header" role="heading" aria-level="2" id="video-panel-title">
+                    <h2 class="panel-title">Cooking Video</h2>
+                </div>
+                <div class="media-iframe-container" role="application" aria-label="Video player">
+                    <iframe 
+                        id="cooking-iframe" 
+                        src="https://www.youtube.com/embed/rLdDhJmI1HY" 
+                        width="100%" 
+                        height="400px" 
+                        frameborder="0" 
+                        title="Recipe video player"
+                        allowfullscreen
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        aria-label="Recipe video player">
+                    </iframe>
+                </div>
+                
+                <!-- Media controls for cooking mode -->
+                <div class="media-controls" role="toolbar" aria-label="Video controls">
+                    <button class="btn" 
+                            onclick="document.getElementById('cooking-iframe').src='https://www.youtube.com/embed/rLdDhJmI1HY'"
+                            aria-label="Play pasta cooking video">
+                        Pasta Video
+                    </button>
+                    <button class="btn" 
+                            onclick="document.getElementById('cooking-iframe').src='https://www.youtube.com/embed/6_OL15hUT4U'"
+                            aria-label="Play sauce cooking video">
+                        Sauce Video
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Large cooking timers -->
+        <div class="cooking-timers" role="region" aria-labelledby="timers-section-title">
+            <div class="panel" role="region" aria-labelledby="timers-panel-title">
+                <div class="panel-header" role="heading" aria-level="2" id="timers-panel-title">
+                    <h2 class="panel-title" id="timers-section-title">Cooking Timers</h2>
+                </div>
+                
+                <!-- Existing active timers -->
+                <div id="cooking-timers-list" role="region" aria-label="Active cooking timers">
+                    {% if active_timers %}
+                        {% for timer in active_timers %}
+                            <div class="timer-item" id="timer-{{ timer.id }}" role="article" aria-label="Timer: {{ timer.label }}, {{ timer.time_remaining }} seconds remaining">
+                                <div class="timer-display">
+                                    <span class="timer-label" aria-label="Timer name">{{ timer.label }}</span>
+                                    <span class="timer-countdown" id="timer-{{ timer.id }}-countdown" aria-label="Time remaining">
+                                        {% set minutes = timer.time_remaining // 60 %}
+                                        {% set seconds = timer.time_remaining % 60 %}
+                                        {{ "%02d" % minutes }}:{{ "%02d" % seconds }}
+                                    </span>
+                                </div>
+                                <div class="timer-controls" role="toolbar" aria-label="Timer controls for {{ timer.label }}">
+                                    <button class="btn btn-sm"
+                                            hx-put="/api/timers/{{ timer.id }}"
+                                            hx-vals='{"active": true}'
+                                            hx-target="#timer-{{ timer.id }}"
+                                            hx-swap="outerHTML"
+                                            aria-label="Start timer: {{ timer.label }}">
+                                        Start
+                                    </button>
+                                    <button class="btn btn-sm btn-danger"
+                                            hx-delete="/api/timers/{{ timer.id }}"
+                                            hx-target="#timer-{{ timer.id }}"
+                                            hx-swap="delete"
+                                            aria-label="Delete timer: {{ timer.label }}">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-timers-message" role="status" aria-live="polite">No active timers</div>
+                    {% endif %}
+                </div>
+                
+                <!-- Form to add new cooking timers -->
+                <form id="add-cooking-timer-form" 
+                      hx-post="/api/timers" 
+                      hx-target="#cooking-timers-list" 
+                      hx-swap="outerHTML" 
+                      hx-on:after-request="this.reset()"
+                      role="form"
+                      aria-label="Add new cooking timer">
+                    <div class="form-group">
+                        <label for="add-timer-label" class="sr-only">Timer Label</label>
+                        <input type="text" id="add-timer-label" name="label" class="form-control" placeholder="Timer label (e.g., Boil water)" required aria-label="Enter timer label">
+                    </div>
+                    <div class="form-row" style="display: flex; gap: 10px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="minutes-input" class="sr-only">Minutes</label>
+                            <input type="number" id="minutes-input" class="form-control" placeholder="Minutes" min="0" value="10" aria-label="Enter minutes for timer">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="seconds-input" class="sr-only">Seconds</label>
+                            <input type="number" id="seconds-input" class="form-control" placeholder="Seconds" min="0" max="59" value="0" aria-label="Enter seconds for timer">
+                        </div>
+                    </div>
+                    <input type="hidden" name="seconds" id="total-seconds" value="600">
+                    <button type="submit" class="btn btn-block" aria-label="Add cooking timer">Add Cooking Timer</button>
+                </form>
+                
+                <script>
+                    // Update total seconds when the form values change
+                    function updateTotalSeconds() {
+                        const minutes = parseInt(document.getElementById('minutes-input').value) || 0;
+                        const seconds = parseInt(document.getElementById('seconds-input').value) || 0;
+                        const totalSeconds = (minutes * 60) + seconds;
+                        document.getElementById('total-seconds').value = totalSeconds;
+                    }
+                    
+                    // Add event listeners to the inputs
+                    document.getElementById('minutes-input').addEventListener('input', updateTotalSeconds);
+                    document.getElementById('seconds-input').addEventListener('input', updateTotalSeconds);
+                    
+                    // Initialize the value
+                    updateTotalSeconds();
+                </script>
+            </div>
+        </div>
+    </div>
+</div>

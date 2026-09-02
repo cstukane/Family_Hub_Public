@@ -1,0 +1,14 @@
+[Unit]
+Description=Chromium Kiosk for Family Hub
+After=graphical.target family-hub.service
+Wants=family-hub.service
+
+[Service]
+User=%i
+Environment=DISPLAY=:0
+ExecStart=/usr/bin/chromium-browser --noerrdialogs --disable-translate --kiosk http://localhost:5000
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=graphical.target

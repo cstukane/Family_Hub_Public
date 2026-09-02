@@ -1,0 +1,281 @@
+<div class="sports-ticker" id="sports-ticker" role="region" aria-labelledby="sports-ticker-title">
+    <div class="sports-ticker-header" role="banner" aria-label="Sports ticker controls">
+        <h3 id="sports-ticker-title">Sports Ticker</h3>
+        <div class="ticker-controls" role="toolbar" aria-label="Sports ticker controls">
+            <button hx-post="/api/sports/refresh" hx-target="#sports-ticker" hx-swap="innerHTML" class="btn btn-sm"
+                aria-label="Refresh sports data">
+                Refresh
+            </button>
+            <button id="manage-teams-btn" class="btn btn-sm" onclick="loadView('settings')"
+                aria-label="Manage favorite teams">
+                Manage Teams
+            </button>
+        </div>
+    </div>
+
+    <div class="sports-ticker-content" role="main">
+        {% if config and config.providers and config.providers.sports %}
+        {% set favorite_teams = config.providers.sports.favorite_teams %}
+        {% else %}
+        {% set favorite_teams = [] %}
+        {% endif %}
+
+        {% if favorite_teams %}
+        <div class="ticker-favorite-teams" role="status" aria-live="polite">
+            <small>Following: {{ favorite_teams | join(', ') }}</small>
+        </div>
+        {% endif %}
+
+        <div class="ticker-games" role="feed" aria-label="Sports game updates">
+            {% for game in sports_data.games %}
+            {% set start_dt = game.start_time | convert_to_timezone('UTC') if game.start_time else None %}
+            <div class="ticker-game {{ 'live' if game.status == 'in_progress' else 'upcoming' if game.status == 'scheduled' else 'completed' }}"
+                role="article"
+                aria-label="{{ game.away_team.name }} vs {{ game.home_team.name }}, {{ game.status.title() }} {% if game.status == 'in_progress' %}{{ game.time_remaining or game.quarter or 'LIVE' }}{% elif start_dt %}at {{ start_dt.strftime('%I:%M %p') }}{% endif %}, Score: {{ game.away_team.name }} {{ game.away_score }} - {{ game.home_team.name }} {{ game.home_score }}">
+                {% if game.is_favorite %}
+                <div class="ticker-game-header" aria-label="Favorite team game">
+                    <span class="ticker-status favorite"
+                        aria-label="Status: {{ game.status.title() }} (favorite team)">{{ game.status.title() }}
+                        *</span>
+                    {% if game.status == 'in_progress' %}
+                    <span class="ticker-clock" aria-label="{{ game.time_remaining or game.quarter or 'LIVE' }}">{{
+                        game.time_remaining or game.quarter or 'LIVE' }}</span>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="ticker-game-header" aria-label="Game status">
+                    <span class="ticker-status" aria-label="Status: {{ game.status.title() }}">{{ game.status.title()
+                        }}</span>
+                    {% if game.status == 'in_progress' %}
+                    <span class="ticker-clock" aria-label="{{ game.time_remaining or game.quarter or 'LIVE' }}">{{
+                        game.time_remaining or game.quarter or 'LIVE' }}</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <div class="ticker-game-teams" aria-label="Teams and scores">
+                    <div class="ticker-team-away" aria-label="{{ game.away_team.name }}">
+                        <span class="ticker-team-name" aria-label="Away team">{{ game.away_team.abbreviation or
+                            game.away_team.name[:3] }}</span>
+                        <span class="ticker-team-score" aria-label="Away score">{{ game.away_score }}</span>
+                    </div>
+
+                    <div class="ticker-game-separator" aria-hidden="true">@</div>
+
+                    <div class="ticker-team-home" aria-label="{{ game.home_team.name }}">
+                        <span class="ticker-team-name" aria-label="Home team">{{ game.home_team.abbreviation or
+                            game.home_team.name[:3] }}</span>
+                        <span class="ticker-team-score" aria-label="Home score">{{ game.home_score }}</span>
+                    </div>
+                </div>
+
+                {% if start_dt %}
+                <div class="ticker-game-time" aria-label="Game time {{ start_dt.strftime('%I:%M %p') }}">
+                    {% if game.show_start_date %}
+                    {{ start_dt.strftime('%m/%d') }} {{ start_dt.strftime('%I:%M %p') }}
+                    {% else %}
+                    {{ start_dt.strftime('%I:%M %p') }}
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="no-games" role="status" aria-live="polite">No upcoming games</div>
+            {% endfor %}
+        </div>
+
+        <div class="ticker-footer" role="contentinfo" aria-label="Sports ticker information">
+            <span class="ticker-last-updated"
+                aria-label="Last updated: {{ sports_data.last_updated.strftime('%H:%M') if sports_data.last_updated else 'N/A' }}">
+                Last updated:
+                <span hx-get="/api/sports/last-updated" hx-trigger="every 60s" hx-swap="innerHTML">
+                    {{ sports_data.last_updated.strftime('%H:%M') if sports_data.last_updated else 'N/A' }}
+                </span>
+            </span>
+        </div>
+    </div>
+
+    <!-- Modal for managing teams -->
+    <div id="manage-teams-modal" class="modal" role="dialog" aria-labelledby="manage-teams-title" aria-modal="true"
+        style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-content" role="document"
+            style="background-color: var(--surface-color); margin: 15% auto; padding: 20px; border: 1px solid var(--border-color); border-radius: var(--border-radius); width: 80%; max-width: 600px; color: var(--text-color);">
+            <div class="modal-header" role="heading" aria-level="2" id="manage-teams-title"
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0;">Manage Favorite Teams</h2>
+                <span class="close" style="font-size: 28px; font-weight: bold; cursor: pointer;"
+                    onclick="document.getElementById('manage-teams-modal').style.display='none'"
+                    aria-label="Close modal">&times;</span>
+            </div>
+            <div class="modal-body" role="document">
+                <p>Select your favorite teams to track:</p>
+                <div id="team-selection-container" role="region" aria-label="Team selection">
+                    <!-- Team selection will be loaded here via HTMX -->
+                </div>
+            </div>
+            <div class="modal-footer"
+                style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-color); text-align: right;">
+                <button class="btn" onclick="document.getElementById('manage-teams-modal').style.display='none'"
+                    aria-label="Close and save team selections">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .sports-ticker {
+        background: var(--surface-color);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .sports-ticker-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .sports-ticker-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: var(--text-color);
+    }
+
+    .ticker-favorite-teams {
+        margin-bottom: 0.75rem;
+        color: var(--accent-color);
+        font-size: 0.9rem;
+    }
+
+    .ticker-controls {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .ticker-games {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        max-height: 400px;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+
+    .ticker-games::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .ticker-games::-webkit-scrollbar-thumb {
+        background: var(--text-color);
+        border-radius: 3px;
+    }
+
+    .ticker-game {
+        display: flex;
+        flex-direction: column;
+        padding: 0.5rem;
+        border-radius: var(--border-radius);
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+    }
+
+    .ticker-game.upcoming {
+        border-left: 3px solid var(--accent-color);
+    }
+
+    .ticker-game.live {
+        border-left: 3px solid #ff4444;
+        background: rgba(255, 68, 68, 0.1);
+    }
+
+    .ticker-game.completed {
+        border-left: 3px solid #888888;
+    }
+
+    .ticker-game-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.25rem;
+        font-size: 0.85rem;
+    }
+
+    .ticker-status.favorite {
+        color: var(--accent-color);
+        font-weight: bold;
+    }
+
+    .ticker-status {
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    .ticker-clock {
+        background: var(--accent-color);
+        color: white;
+        padding: 0.1rem 0.4rem;
+        border-radius: var(--border-radius);
+        font-size: 0.8rem;
+    }
+
+    .ticker-game-teams {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 0.25rem 0;
+    }
+
+    .ticker-team-away,
+    .ticker-team-home {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex: 1;
+    }
+
+    .ticker-team-name {
+        font-weight: bold;
+        min-width: 60px;
+    }
+
+    .ticker-team-score {
+        font-weight: bold;
+        font-size: 1.2rem;
+        min-width: 30px;
+        text-align: right;
+    }
+
+    .ticker-game-separator {
+        font-weight: bold;
+        margin: 0 0.5rem;
+    }
+
+    .ticker-game-time {
+        text-align: right;
+        font-size: 0.8rem;
+        color: var(--text-color-secondary);
+        margin-top: 0.25rem;
+    }
+
+    .ticker-footer {
+        margin-top: 1rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--border-color);
+        text-align: right;
+    }
+
+    .no-games {
+        text-align: center;
+        color: var(--text-color-secondary);
+        font-style: italic;
+        padding: 1rem;
+    }
+
+    .modal-content {
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+</style>

@@ -1,0 +1,47 @@
+{% if mode in ['timer', 'preview'] %}
+<div class="center-zone-card" data-mode="{{ mode }}">
+    {% if mode == 'timer' and timer %}
+        <div class="center-zone-header">
+            <span class="center-zone-title">Timer Running</span>
+            <span class="center-zone-updated">Last updated {{ last_updated }}</span>
+        </div>
+        <div class="center-zone-timer">
+            <div class="center-zone-timer-label">{{ timer.label }}</div>
+            <div class="center-zone-timer-countdown">{{ timer.remaining_label }}</div>
+        </div>
+        <div class="center-zone-actions">
+            <button class="btn btn-sm" onclick="loadAndShowModal('/partials/timers-modal')">Open Timers</button>
+            <button class="btn btn-sm btn-danger" onclick="cancelCenterZoneTimer({{ timer.id }})">Cancel</button>
+        </div>
+    {% elif mode == 'preview' %}
+        <div class="center-zone-header">
+            <span class="center-zone-title">Notes & Shopping</span>
+            <span class="center-zone-updated">Last updated {{ last_updated }}</span>
+        </div>
+        <div class="center-zone-preview">
+            {% if notes %}
+                <div class="center-zone-list">
+                    <div class="center-zone-list-title">Notes</div>
+                    <ul>
+                        {% for note in notes %}
+                            <li>{{ note.text | truncate(80, True, '...') }}</li>
+                        {% endfor %}
+                    </ul>
+                    <button class="btn btn-sm" onclick="loadAndShowModal('/partials/notes-modal')">Open Notes</button>
+                </div>
+            {% endif %}
+            {% if shopping %}
+                <div class="center-zone-list">
+                    <div class="center-zone-list-title">Shopping</div>
+                    <ul>
+                        {% for item in shopping %}
+                            <li>{{ item.qty or 1 }} x {{ item.text | truncate(60, True, '...') }}</li>
+                        {% endfor %}
+                    </ul>
+                    <button class="btn btn-sm" onclick="loadAndShowModal('/partials/shopping-modal')">Open Shopping</button>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endif %}

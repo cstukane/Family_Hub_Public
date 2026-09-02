@@ -1,0 +1,114 @@
+{% macro weather_icon(condition) %}
+{% set c = condition.lower() %}
+<span class="weather-icon-wrap" title="{{ condition }}" aria-hidden="true">
+{% if 'sunny' in c or 'clear' in c %}
+    <svg class="weather-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"></circle>
+        <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+    </svg>
+{% elif 'partly cloudy' in c %}
+    <svg class="weather-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="2"></circle>
+        <path d="M5 14h9a4 4 0 0 0 0-8 5 5 0 0 0-9 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+    </svg>
+{% elif 'cloudy' in c or 'overcast' in c %}
+    <svg class="weather-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 18h11a4 4 0 0 0 0-8 5 5 0 0 0-9 3 3 3 0 0 0-2 5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+    </svg>
+{% elif 'rain' in c %}
+    <svg class="weather-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 16h11a4 4 0 0 0 0-8 5 5 0 0 0-9 3 3 3 0 0 0-2 5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+        <path d="M9 20l-1 2M13 20l-1 2M17 20l-1 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+    </svg>
+{% elif 'snow' in c %}
+    <svg class="weather-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 16h11a4 4 0 0 0 0-8 5 5 0 0 0-9 3 3 3 0 0 0-2 5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+        <path d="M9 20h0M13 20h0M17 20h0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+    </svg>
+{% elif 'storm' in c or 'thunder' in c %}
+    <svg class="weather-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 15h11a4 4 0 0 0 0-8 5 5 0 0 0-9 3 3 3 0 0 0-2 5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+        <path d="M12 16l-2 4h3l-2 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>
+    </svg>
+{% elif 'fog' in c %}
+    <svg class="weather-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 10h16M6 14h12M5 18h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+    </svg>
+{% else %}
+    <svg class="weather-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"></circle>
+    </svg>
+{% endif %}
+</span>
+{% endmacro %}
+
+<div class="sidebar-weather" role="region" aria-label="Weather">
+{% if weather and weather.error %}
+    <div class="weather-error" role="alert">Weather data unavailable: {{ weather.error }}</div>
+{% else %}
+    {% set cur_temp = "%.0f"|format(weather.current.temperature) %}
+    {% set cur_feels = "%.0f"|format(weather.current.feels_like) %}
+    {% set cur_wind = "%.0f"|format(weather.current.wind_speed) %}
+    {# Current weather — opens Hourly #}
+    <div class="weather-current weather-clickable" role="article"
+         onclick="event.stopPropagation(); loadAndShowModal('/partials/weather-modal?view=hourly');"
+         onkeydown="if(event.key==='Enter' || event.key===' '){ event.preventDefault(); event.stopPropagation(); loadAndShowModal('/partials/weather-modal?view=hourly'); }"
+         tabindex="0" role="button" aria-haspopup="dialog"
+         aria-label="Current weather: {{ cur_temp }} degrees, {{ weather.current.condition }}, feels like {{ cur_feels }} degrees, wind {{ cur_wind }} miles per hour. Click for hourly forecast.">
+        <div class="weather-current-row">
+            <span class="current-temp" aria-label="Current temperature: {{ cur_temp }} degrees">{{ cur_temp }}<span class="degree-mark">&deg;</span></span>
+            <span class="weather-current-condition-icon" title="{{ weather.current.condition }}" aria-hidden="true">
+                {{ weather_icon(weather.current.condition) }}
+            </span>
+        </div>
+        <div class="weather-condition">{{ weather.current.condition }}</div>
+        <div class="weather-meta">Feels {{ cur_feels }}&deg; &middot; Wind {{ cur_wind }} mph</div>
+    </div>
+
+    {# Next 5 Hours — opens Hourly #}
+    <div class="weather-section weather-hourly weather-clickable"
+         onclick="event.stopPropagation(); loadAndShowModal('/partials/weather-modal?view=hourly');"
+         onkeydown="if(event.key==='Enter' || event.key===' '){ event.preventDefault(); event.stopPropagation(); loadAndShowModal('/partials/weather-modal?view=hourly'); }"
+         tabindex="0" role="button" aria-haspopup="dialog"
+         aria-label="Next 5 hours forecast. Click for hourly forecast.">
+        <div class="weather-section-label">Next 5 Hours</div>
+        <div class="weather-hourly-row">
+            {% for hour in weather.hourly[:5] %}
+                {% set safe_time = (hour.time|time_12hour_compact if hour.time else '') or '--' %}
+                <div class="weather-hourly-col">
+                    <span class="hourly-time">{{ safe_time }}</span>
+                    {{ weather_icon(hour.condition) }}
+                    <span class="hourly-temp">{{ "%.0f"|format(hour.temperature) }}&deg;</span>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {# Daily forecast — opens 7-Day #}
+    <div class="weather-section weather-daily weather-clickable"
+         onclick="event.stopPropagation(); loadAndShowModal('/partials/weather-modal?view=daily');"
+         onkeydown="if(event.key==='Enter' || event.key===' '){ event.preventDefault(); event.stopPropagation(); loadAndShowModal('/partials/weather-modal?view=daily'); }"
+         tabindex="0" role="button" aria-haspopup="dialog"
+         aria-label="3-day forecast. Click for 7-day forecast.">
+        {% set day_highs = weather.daily[:3] | map(attribute='high') | list %}
+        {% set day_lows = weather.daily[:3] | map(attribute='low') | list %}
+        {% set range_min = day_lows | min if day_lows else 0 %}
+        {% set range_max = day_highs | max if day_highs else 1 %}
+        {% set range_span = (range_max - range_min) if (range_max - range_min) > 0 else 1 %}
+        {% for day in weather.daily[:3] %}
+            {% set day_name = (day.date | day_of_week) if day.date else '--' %}
+            {% set bar_start = (((day.low - range_min) / range_span) * 100) %}
+            {% set bar_width = ((((day.high - day.low) / range_span) * 100)) %}
+            <div class="weather-daily-row">
+                <span class="daily-day-name">{{ day_name }}</span>
+                {{ weather_icon(day.condition) }}
+                <span class="daily-range-bar" aria-hidden="true">
+                    <span class="daily-range-fill" style="left: {{ bar_start }}%; width: {{ bar_width }}%;"></span>
+                </span>
+                <span class="daily-high">{{ "%.0f"|format(day.high) }}&deg;</span>
+                <span class="daily-low">{{ "%.0f"|format(day.low) }}&deg;</span>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+</div>

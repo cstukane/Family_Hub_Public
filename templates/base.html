@@ -1,0 +1,1856 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ config.ui.theme if config and config.ui.theme else 'auto' }}">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Family Hub - A comprehensive dashboard with calendar, notes, shopping, weather, and more.">
+    <title>Family Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <script>
+        window.MEDIA_LAUNCHER_TOKEN = JSON.parse('{{ (media_launcher_token or "") | tojson | safe }}');
+        window.MEDIA_ENDPOINT = JSON.parse('{{ (config.media.launcher_endpoint if config and config.media else "") | tojson | safe }}');
+        window.MEDIA_WHITELIST = JSON.parse('{{ (config.media.allowed_domains if config and config.media else []) | tojson | safe }}');
+        window.APP_CONFIG = JSON.parse('{{ config_json | default("{}") | safe }}');
+        if (!Array.isArray(window.MEDIA_WHITELIST)) {
+            window.MEDIA_WHITELIST = [];
+        }
+    </script>
+    <style>
+        /* Position app bar at fixed bottom position */
+        .app-bar {
+            position: fixed !important;
+            bottom: 48px;
+            /* Default position leaves space for ticker */
+            left: 0;
+            right: 0;
+            z-index: 9998;
+            /* Above content but below ticker */
+        }
+
+        /* When no ticker exists, move app bar to bottom */
+        body:not(.has-ticker) .app-bar {
+            bottom: 0;
+        }
+
+        /* Ticker appears above app bar */
+        .sports-horizontal-ticker-container {
+            z-index: 9999 !important;
+            /* Above app bar */
+        }
+    </style>
+    <script src="https://unpkg.com/htmx.org@1.8.4" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script>
+        // Update theme based on system preference when theme is 'auto'
+        if (document.documentElement.getAttribute('data-theme') === 'auto') {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+            document.documentElement.setAttribute('data-theme', prefersDark.matches ? 'dark' : 'light');
+
+            // Listen for changes in system preference
+            prefersDark.addEventListener('change', function () {
+                document.documentElement.setAttribute('data-theme', prefersDark.matches ? 'dark' : 'light');
+            });
+        }
+
+        // Function to enable high contrast mode
+        function enableHighContrast() {
+            document.documentElement.setAttribute('data-contrast', 'high');
+        }
+
+        // Function to disable high contrast mode
+        function disableHighContrast() {
+            document.documentElement.removeAttribute('data-contrast');
+        }
+
+        // Check for saved contrast preference
+        document.addEventListener('DOMContentLoaded', function () {
+            const savedContrast = localStorage.getItem('contrast-mode');
+            if (savedContrast === 'high') {
+                enableHighContrast();
+            }
+        });
+
+        // Initialize CSS variables for responsive design
+        function updateCSSVariables() {
+            // Update --vh variable to be 1% of viewport height
+            const vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+
+            // Update header and footer heights if elements exist
+            const footerEl = document.querySelector('.app-bar');
+            if (footerEl) {
+                const footerHeight = footerEl.offsetHeight;
+                document.documentElement.style.setProperty('--footer-h', `${footerHeight}px`);
+            }
+
+            const sidebarEl = document.querySelector('.sidebar');
+            if (sidebarEl) {
+                const sidebarWidth = sidebarEl.offsetWidth;
+                document.documentElement.style.setProperty('--sidebar-w', `${sidebarWidth}px`);
+            }
+
+            // Set density class based on config
+            const body = document.body;
+            const config = JSON.parse('{{ config_json | default("{}") | safe }}');
+            if (config && config.ui && config.ui.density) {
+                body.classList.remove('compact', 'comfortable');
+                body.classList.add(config.ui.density);
+
+                // Update density attribute for CSS selectors
+                document.documentElement.setAttribute('data-density', config.ui.density);
+            }
+        }
+
+        // Calculate and set calendar container height
+        function updateCalendarHeight() {
+            const calendarContainer = document.getElementById('calendar-container');
+            if (!calendarContainer) return;
+
+            const headerEl = document.querySelector('.calendar-panel-header') ||
+                document.querySelector('.calendar-header-bar') ||
+                document.querySelector('.panel-header') ||
+                document.querySelector('.calendar-navigation');
+            const footerEl = document.querySelector('.app-bar');
+
+            const headerHeight = headerEl ? headerEl.offsetHeight : 0;
+            const footerHeight = footerEl ? footerEl.offsetHeight : 0;
+
+            // Calculate available height: viewport - header - footer - some padding
+            const availableHeightPx = Math.max(
+                window.innerHeight - headerHeight - footerHeight - 40,
+                200
+            );
+            const availableHeight = `${availableHeightPx}px`;
+
+            // Apply to calendar container - adjust for month view to avoid scroll in the tile
+            const calendarGrid = calendarContainer.querySelector('.calendar-grid');
+            const isMonthView = calendarGrid && calendarGrid.dataset.view === 'month';
+
+            if (isMonthView) {
+                calendarContainer.style.height = '';
+                calendarContainer.style.maxHeight = availableHeight;
+                calendarContainer.style.overflow = 'hidden';
+                if (calendarGrid) {
+                    calendarGrid.style.height = '';
+                    calendarGrid.style.maxHeight = '';
+                }
+            } else {
+                calendarContainer.style.height = '';
+                calendarContainer.style.maxHeight = availableHeight;
+                calendarContainer.style.overflow = 'auto';
+                if (calendarGrid) {
+                    calendarGrid.style.height = '';
+                    calendarGrid.style.maxHeight = availableHeight;
+                }
+            }
+        }
+
+        // Update CSS variables on load and resize
+        document.addEventListener('DOMContentLoaded', function () {
+            updateCSSVariables();
+            updateCalendarHeight(); // Update calendar height
+            window.addEventListener('resize', updateCSSVariables);
+            window.addEventListener('resize', updateCalendarHeight);
+        });
+
+        // Also update calendar height after HTMX updates
+        document.addEventListener('htmx:afterSwap', function (event) {
+            setTimeout(updateCalendarHeight, 100);
+        });
+    </script>
+</head>
+
+<body class="{% if active_view == 'week_calendar' or not active_view %}home-dashboard-view{% endif %}">
+
+    <div class="app-container">
+        <!-- Alerts banner -->
+        <div id="alerts-container" role="status" aria-live="polite" aria-atomic="true">
+            <div hx-get="/partials/alerts" hx-trigger="load" hx-swap="innerHTML" role="region"
+                aria-label="System alerts"></div>
+        </div>
+
+        <!-- Main content area -->
+        <main class="main-content" id="main-content" role="main" tabindex="-1">
+            {% if active_view == 'week_calendar' or not active_view %}
+            <div id="calendar-container" role="region" aria-label="Weekly Calendar">
+                <div hx-get="/partials/calendar/week" hx-trigger="load, every 5m" hx-swap="innerHTML" role="application"
+                    aria-label="Weekly calendar view"></div>
+            </div>
+            <!-- 3-column bottom tiles: Up Next | Shopping | Quick Timer / Commute -->
+            <div class="bottom-tiles">
+                <!-- UP NEXT tile -->
+                <div class="tile tile-upnext" role="region" aria-label="Up Next events">
+                    <div class="tile-header">
+                        <span>Up Next</span>
+                    </div>
+                    <div hx-get="/partials/calendar/upnext" hx-trigger="load, every 60s" hx-swap="innerHTML"></div>
+                </div>
+                <!-- SHOPPING tile -->
+                <div class="tile tile-shopping tile-actionable" role="region" aria-label="Shopping list" tabindex="0"
+                    aria-haspopup="dialog"
+                    onclick="loadAndShowModal('/partials/shopping-modal')"
+                    onkeydown="if(event.key==='Enter' || event.key===' '){ event.preventDefault(); loadAndShowModal('/partials/shopping-modal'); }">
+                    <div class="tile-header">
+                        <span>Shopping</span>
+                        <span class="tile-badge hidden" id="shopping-tile-badge"></span>
+                    </div>
+                    <div hx-get="/partials/shopping?context=tile" hx-trigger="load, every 5m" hx-swap="innerHTML"></div>
+                </div>
+                <!-- COMMUTE / QUICK TIMER tile -->
+                <div class="tile tile-right" role="region" aria-label="Commute or Quick Timer">
+                    <div class="tile-header">
+                        <span id="tile-right-label">Quick Timer</span>
+                    </div>
+                    <div id="tile-right-content">
+                        <!-- Commute loads first; JS falls back to quick-timer if no commute config -->
+                        <div hx-get="/partials/commute-map" hx-trigger="load" hx-swap="innerHTML"
+                            id="commute-tile-inner"></div>
+                        <!-- Quick timer preset buttons (shown when commute is hidden/unavailable) -->
+                        <div class="quick-timer-tile" id="quick-timer-fallback" style="display:none;">
+                            <div class="timer-presets">
+                                <button class="timer-preset-btn" onclick="startQuickTimer(5)">5 min</button>
+                                <button class="timer-preset-btn" onclick="startQuickTimer(10)">10 min</button>
+                                <button class="timer-preset-btn" onclick="startQuickTimer(15)">15 min</button>
+                                <button class="timer-preset-btn" onclick="startQuickTimer(30)">30 min</button>
+                            </div>
+                            <div class="timer-custom-row">
+                                <input class="timer-custom-input" type="number" min="1" max="999" placeholder="min"
+                                    id="quick-timer-custom-input" aria-label="Custom timer minutes">
+                                <button class="timer-start-btn"
+                                    onclick="startQuickTimer(parseInt(document.getElementById('quick-timer-custom-input').value))">Start</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% elif active_view == 'media' %}
+            <div id="media-container" role="region" aria-label="Media Content">
+                <div hx-get="/partials/media" hx-trigger="load" hx-swap="innerHTML" role="application"
+                    aria-label="Media applications"></div>
+            </div>
+            {% elif active_view == 'cooking' %}
+            <div id="cooking-container" role="region" aria-label="Cooking Mode">
+                <div hx-get="/view/cooking" hx-trigger="load" hx-swap="innerHTML" role="application"
+                    aria-label="Cooking mode interface"></div>
+            </div>
+            {% elif active_view == 'sports' %}
+            <div id="sports-container" role="region" aria-label="Sports Information">
+                <div hx-get="/view/sports" hx-trigger="load, every 2m" hx-swap="innerHTML" role="application"
+                    aria-label="Sports ticker and details"></div>
+            </div>
+            {% elif active_view == 'settings' %}
+            <div id="settings-container" role="region" aria-label="Application Settings">
+                {% if settings_content %}
+                {{ settings_content | safe }}
+                {% else %}
+                <div hx-get="/partials/settings" hx-trigger="load" hx-swap="innerHTML" role="form"
+                    aria-label="Settings form"></div>
+                {% endif %}
+            </div>
+            {% else %}
+            <div id="other-view-container" role="region" aria-label="{{ active_view or 'Week Calendar' }} View">
+                <!-- This will be populated based on the active view -->
+                <p>View: {{ active_view or 'week_calendar' }}</p>
+            </div>
+            {% endif %}
+        </main>
+        <!-- Sidebar with panels -->
+        <aside class="sidebar" id="sidebar" role="complementary" aria-label="Information panels">
+            <div class="system-header sidebar-clock" role="status" aria-live="polite" aria-atomic="true">
+                <div id="system-time" class="system-time" aria-label="Current time"></div>
+                <div id="system-date" class="system-date" aria-label="Current date"></div>
+                <div class="day-progress-bar" title="Day progress" aria-hidden="true">
+                    <div class="day-progress-fill" id="day-progress-fill" style="width: 0%"></div>
+                </div>
+            </div>
+            <!-- Quick-access vertical list, grouped in a single rounded tile -->
+            <div class="quick-access-tile">
+            <ul class="quick-access-list" role="list">
+                <li>
+                    <button id="notes-icon-btn" class="quick-access-item" title="Notes" aria-label="Open Notes"
+                        onclick="loadAndShowModal('/partials/notes-modal')">
+                        <span class="qa-icon">
+                            <img src="{{ url_for('static', filename='img/notes.svg') }}" alt="" aria-hidden="true">
+                        </span>
+                        <span class="qa-label">Notes</span>
+                        <span class="qa-badge hidden" id="notes-badge"></span>
+                    </button>
+                </li>
+                <li>
+                    <button id="shopping-icon-btn" class="quick-access-item" title="Shopping List"
+                        aria-label="Open Shopping List" onclick="loadAndShowModal('/partials/shopping-modal')">
+                        <span class="qa-icon">
+                            <img src="{{ url_for('static', filename='img/shopping.svg') }}" alt="" aria-hidden="true">
+                        </span>
+                        <span class="qa-label">Shopping</span>
+                        <span class="qa-badge hidden" id="shopping-badge"></span>
+                    </button>
+                </li>
+                <li>
+                    <button id="timers-icon-btn" class="quick-access-item" title="Timers" aria-label="Open Timers"
+                        onclick="loadAndShowModal('/partials/timers-modal')">
+                        <span class="qa-icon">
+                            <img src="{{ url_for('static', filename='img/timers.svg') }}" alt="" aria-hidden="true">
+                        </span>
+                        <span class="qa-label">Timers</span>
+                        <span class="qa-badge hidden" id="timers-badge"></span>
+                    </button>
+                </li>
+                <li>
+                    <button id="kitchen-reference-btn" class="quick-access-item" title="Kitchen Reference"
+                        aria-label="Open Kitchen Reference"
+                        onclick="loadAndShowModal('/partials/kitchen-reference-modal')">
+                        <span class="qa-icon">
+                            <img src="{{ url_for('static', filename='img/cooking.svg') }}" alt="" aria-hidden="true">
+                        </span>
+                        <span class="qa-label">Kitchen Ref</span>
+                    </button>
+                </li>
+            </ul>
+            </div>
+
+            <!-- Weather panel: inline in sidebar (no card chrome) -->
+            <div class="sidebar-weather-wrapper">
+                {% for panel_name in config.layout.sidebar if config %}
+                {% if panel_name == 'weather' %}
+                <div id="{{ panel_name }}-panel-container" class="weather-panel-container"
+                     tabindex="0"
+                     aria-label="Weather forecast. Sections open hourly or 7-day view.">
+                    <div hx-get="/partials/{{ panel_name }}" hx-trigger="load, every 15m" hx-swap="innerHTML"
+                        role="application" aria-label="{{ panel_name }} panel content"></div>
+                </div>
+                {% elif panel_name == 'sports' %}
+                <!-- Sports panel moved to horizontal ticker at bottom -->
+                {% endif %}
+                {% endfor %}
+
+                <!-- Miniplayer docked directly beneath the weather panel -->
+                <div class="sidebar-miniplayer-wrapper">
+                    <div hx-get="/partials/miniplayer" hx-trigger="load" hx-swap="innerHTML"></div>
+                </div>
+
+                <!-- Floating timer display -->
+                <div id="floating-timer" class="floating-timer" style="display: none;" role="region"
+                    aria-label="Active timers">
+                    <div class="floating-timer-title">Active Timers</div>
+                    <ul class="floating-timer-list" id="floating-timer-list" role="list"></ul>
+                </div>
+            </div>
+        </aside>
+
+        <!-- App bar at the bottom -->
+        <nav class="app-bar" id="app-bar" role="navigation" aria-label="Application navigation">
+            {% for app in config.apps if config %}
+            {% set is_media_child = (app.action in ['open_iframe', 'open_tab']) and app.url %}
+            <button class="app-bar-btn" {% if not is_media_child %} hx-post="/api/launch"
+                hx-vals='{"app_id": "{{ app.id }}"}' hx-target="#main-content" hx-swap="innerHTML" {% endif %}
+                data-app-id="{{ app.id }}" data-app-action="{{ app.action }}" {% if app.url
+                %}data-app-url="{{ app.url }}" {% endif %} {% if is_media_child %}data-media-launch="child" {% endif %}
+                title="{{ app.label }}" aria-label="{{ app.label }}" role="menuitem" type="button">
+                <span class="app-bar-btn-icon" aria-hidden="true">
+                    {% if app.icon %}
+                    {% if app.icon.endswith('.svg') %}
+                    <img src="{{ url_for('static', filename='img/' + app.icon) }}" alt="{{ app.label }}"
+                        onerror="handleMissingIcon(this);">
+                    {% elif app.icon.endswith('.png') or app.icon.endswith('.jpg') or app.icon.endswith('.jpeg') or
+                    app.icon.endswith('.gif') %}
+                    <img src="{{ url_for('static', filename='img/' + app.icon) }}" alt="{{ app.label }}"
+                        onerror="handleMissingIcon(this);">
+                    {% else %}
+                    <span class="icon-placeholder">{{ app.label|first|upper }}</span>
+                    {% endif %}
+                    {% else %}
+                    <span class="icon-placeholder">{{ app.label|first|upper }}</span>
+                    {% endif %}
+                </span>
+                <span class="app-bar-btn-label">{{ app.label }}</span>
+            </button>
+            {% endfor %}
+
+            {% for app in config.extra_apps if config %}
+            {% set is_media_child = (app.action in ['open_iframe', 'open_tab']) and app.url %}
+            <button class="app-bar-btn" {% if not is_media_child %} hx-post="/api/launch"
+                hx-vals='{"app_id": "{{ app.id }}"}' hx-target="#main-content" hx-swap="innerHTML" {% endif %}
+                data-app-id="{{ app.id }}" data-app-action="{{ app.action }}" {% if app.url
+                %}data-app-url="{{ app.url }}" {% endif %} {% if is_media_child %}data-media-launch="child" {% endif %}
+                title="{{ app.label }}" aria-label="{{ app.label }}" role="menuitem" type="button">
+                <span class="app-bar-btn-icon" aria-hidden="true">
+                    {% if app.icon %}
+                    {% if app.icon.endswith('.svg') %}
+                    <img src="{{ url_for('static', filename='img/' + app.icon) }}" alt="{{ app.label }}"
+                        onerror="handleMissingIcon(this);">
+                    {% elif app.icon.endswith('.png') or app.icon.endswith('.jpg') or app.icon.endswith('.jpeg') or
+                    app.icon.endswith('.gif') %}
+                    <img src="{{ url_for('static', filename='img/' + app.icon) }}" alt="{{ app.label }}"
+                        onerror="handleMissingIcon(this);">
+                    {% else %}
+                    <span class="icon-placeholder">{{ app.label|first|upper }}</span>
+                    {% endif %}
+                    {% else %}
+                    <span class="icon-placeholder">{{ app.label|first|upper }}</span>
+                    {% endif %}
+                </span>
+                <span class="app-bar-btn-label">{{ app.label }}</span>
+            </button>
+            {% endfor %}
+
+            <!-- Folder button for additional apps -->
+            <button class="app-bar-btn" onclick="loadAndShowModal('/partials/folder-modal')" title="Apps Folder"
+                aria-label="Apps Folder" role="menuitem">
+                <span class="app-bar-btn-icon" aria-hidden="true">
+                    <img src="{{ url_for('static', filename='img/folder.svg') }}" alt="">
+                </span>
+                <span class="app-bar-btn-label">Apps</span>
+            </button>
+
+            <!-- Settings button -->
+            <a class="app-bar-btn" href="/settings" title="Settings & Status" aria-label="Settings and Status"
+                role="menuitem">
+                <span class="app-bar-btn-icon" aria-hidden="true">
+                    <img src="{{ url_for('static', filename='img/settings.svg') }}" alt="">
+                </span>
+                <span class="app-bar-btn-label">Settings</span>
+            </a>
+
+            <!-- Voice control button if voice is enabled -->
+            {% if config.features.voice %}
+            <button id="voice-control-btn" class="app-bar-btn" title="Voice Commands" aria-label="Voice Commands"
+                role="menuitem">
+                <span class="app-bar-btn-icon" aria-hidden="true">
+                    <img src="{{ url_for('static', filename='img/voice.svg') }}" alt="">
+                </span>
+                <span class="app-bar-btn-label">Voice</span>
+            </button>
+            {% endif %}
+        </nav>
+
+        <div id="dock-handle" class="dock-handle" aria-hidden="true"></div>
+        <div id="dock-hot-zone" class="dock-hot-zone" aria-hidden="true"></div>
+
+        <!-- Sports Horizontal Ticker (Phase 8) - Positioned below app bar -->
+        {% if config.providers.sports %}
+        <div class="sports-horizontal-ticker-container"
+            style="position: fixed; bottom: 0; left: 0; right: 0; height: 48px; z-index: 9997; background-color: var(--surface-color); border-top: 1px solid var(--border-color); display: flex; align-items: center;">
+            <div hx-get="/partials/sports/horizontal-ticker" hx-trigger="load" hx-target="this" hx-swap="innerHTML"
+                style="flex: 1; height: 100%; overflow: hidden;"
+                role="marquee" aria-label="Sports ticker with scrolling game updates">
+                <!-- Horizontal ticker will be loaded here -->
+            </div>
+            <!-- Background data refresh using JSON API to update ticker without full HTML swap -->
+            <script>
+                // Set up background refresh using JSON API for efficient updates
+                let tickerRefreshInterval = null;
+
+                function refreshTickerData() {
+                    fetch('/api/sports/ticker')
+                        .then(response => response.json())
+                        .then(data => {
+                            // Find the ticker element
+                            const tickerElement = document.getElementById('sports-horizontal-ticker');
+                            if (tickerElement) {
+                                // Update the data attribute with fresh JSON
+                                tickerElement.setAttribute('data-sports-json', JSON.stringify(data));
+
+                                // Trigger the JavaScript function to update ticker content
+                                if (window.initializeTickerFromJson) {
+                                    window.initializeTickerFromJson();
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error refreshing ticker data:', error);
+                        });
+                }
+
+                // Startup catch-up: check for data as soon as the first ESPN fetch finishes
+                // (backend fetch typically completes in 5-15s; don't wait 2 full minutes)
+                setTimeout(refreshTickerData, 8000);
+                setTimeout(refreshTickerData, 20000);
+                setTimeout(refreshTickerData, 50000);
+
+                // Start background refresh every 2 minutes
+                if (tickerRefreshInterval === null) {
+                    tickerRefreshInterval = setInterval(refreshTickerData, 120000); // 2 minutes = 120000ms
+                }
+
+                // Clean up interval when page unloads
+                window.addEventListener('beforeunload', function () {
+                    if (tickerRefreshInterval) {
+                        clearInterval(tickerRefreshInterval);
+                    }
+                });
+            </script>
+        </div>
+        <script>
+            // Add class to body when ticker is present to adjust app bar position
+            document.addEventListener('DOMContentLoaded', function () {
+                document.body.classList.add('has-ticker');
+            });
+        </script>
+        {% endif %}
+
+        <!-- Voice Commands Help Modal -->
+        <div id="voice-help-modal" class="modal" role="dialog" aria-labelledby="voice-help-title" aria-modal="true"
+            style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+            <div class="modal-content" role="document"
+                style="background-color: var(--surface-color); margin: 15% auto; padding: 20px; border: 1px solid var(--border-color); border-radius: var(--border-radius); width: 80%; max-width: 600px; color: var(--text-color);">
+                <div class="modal-header" role="heading" aria-level="2" id="voice-help-title"
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2 style="margin: 0;">Voice Commands Help</h2>
+                    <span id="close-voice-help" style="font-size: 28px; font-weight: bold; cursor: pointer;"
+                        aria-label="Close modal">&times;</span>
+                </div>
+                <div class="modal-body" id="voice-commands-list" role="document">
+                    <!-- Voice commands will be loaded here via JavaScript -->
+                    <p>Loading available voice commands...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ambient Display Mode -->
+        <div id="ambient-display" class="ambient-display"
+            style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: black; z-index: 9999; overflow: hidden;">
+            <div class="ambient-content"
+                style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                <div class="ambient-slide" style="position: relative; width: 100%; height: 100%;">
+                    <img id="ambient-photo" src="" alt="Ambient display photo"
+                        style="width: 100%; height: 100%; object-fit: cover; opacity: 0.7;">
+                    <div id="ambient-info"
+                        style="position: absolute; bottom: 20px; left: 20px; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.7);">
+                        <div id="ambient-date-time" style="font-size: 2em; margin-bottom: 10px;">Loading...</div>
+                        <div id="ambient-weather" style="font-size: 1.5em;">Weather info</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/hotkeys.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/media-launcher.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/socketio.js') }}"></script>
+    {% if config.features.voice %}<script src="{{ url_for('static', filename='js/voice.js') }}"></script>{% endif %}
+    <script src="{{ url_for('static', filename='js/app-bar.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/center-zone.js') }}"></script>
+    <!-- Fragment-specific JavaScript modules for proper cleanup -->
+    <script src="{{ url_for('static', filename='js/fragments/calendar.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/fragments/chore.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/fragments/photos.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/fragments/music.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/fragments/commute-tile.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/fragments/miniplayer.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/fragments/sports-ticker.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/fragments/ambient.js') }}"></script>
+
+    <script>
+        // Set up HTMX configuration to handle toast responses globally
+        document.addEventListener('DOMContentLoaded', function () {
+            // Handle toast responses from HTMX requests
+            document.body.addEventListener('htmx:afterOnLoad', function (evt) {
+                // Check if the response contains toast JavaScript
+                if (evt.detail.xhr && evt.detail.xhr.responseText &&
+                    evt.detail.xhr.responseText.includes('window.toast')) {
+                    // Execute the toast script in the response
+                    try {
+                        const responseText = evt.detail.xhr.responseText;
+                        const runScript = (code) => {
+                            if (!code || !code.includes('window.toast')) {
+                                return;
+                            }
+                            const tempScript = document.createElement('script');
+                            tempScript.textContent = code;
+                            document.body.appendChild(tempScript);
+                            document.body.removeChild(tempScript);
+                        };
+
+                        if (responseText.trim().startsWith('<')) {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(responseText, 'text/html');
+                            doc.querySelectorAll('script').forEach((script) => {
+                                runScript(script.textContent || '');
+                            });
+                        } else {
+                            runScript(responseText);
+                        }
+                    } catch (e) {
+                        console.error('Error executing toast script:', e);
+                    }
+                }
+            });
+        });
+
+        // Function to handle missing images and replace with icon placeholders
+        function handleMissingIcon(imgElement) {
+            // Get the alt text to use for the placeholder
+            const altText = imgElement.alt || 'App';
+            const firstChar = altText.charAt(0).toUpperCase();
+
+            // Create a span element for the icon placeholder
+            const placeholder = document.createElement('span');
+            placeholder.className = 'icon-placeholder';
+            placeholder.textContent = firstChar;
+            placeholder.setAttribute('aria-label', altText + ' icon placeholder');
+
+            // Replace the image with the placeholder inside the same parent element
+            imgElement.parentNode.replaceChild(placeholder, imgElement);
+        }
+
+        // Function to load and show a modal from a URL
+        function loadAndShowModal(url) {
+            fetch(url)
+                .then(response => response.text())
+                .then(html => {
+                    // Create a temporary container to parse the HTML
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html;
+
+                    // Get the modal element
+                    const modalElement = tempDiv.querySelector('.modal');
+                    if (modalElement) {
+                        // Add the modal to the body
+                        document.body.appendChild(modalElement);
+
+                        // Let HTMX initialize any attributes inside the modal
+                        if (window.htmx) {
+                            window.htmx.process(modalElement);
+                        }
+
+                        const initFnName = modalElement.getAttribute('data-modal-init');
+                        if (initFnName && typeof window[initFnName] === 'function') {
+                            try {
+                                window[initFnName](modalElement);
+                            } catch (initError) {
+                                console.error(`Error initializing modal (${initFnName}):`, initError);
+                            }
+                        }
+
+                        // Show the modal with animation
+                        setTimeout(() => {
+                            modalElement.classList.add('show');
+                        }, 10); // Small delay to ensure it's added to DOM before animation
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading modal:', error);
+                });
+        }
+
+        function showEventDetailsModal(details) {
+            const normalizeText = (value) => {
+                const cleaned = (value ?? '').toString().trim();
+                const lowered = cleaned.toLowerCase();
+                if (!cleaned || lowered === 'none' || lowered === 'null' || lowered === 'undefined') {
+                    return '';
+                }
+                return cleaned;
+            };
+            const descriptionText = normalizeText(details.description).replace(/\\n/g, '\n');
+            const isAllDay = details.allDay === true;
+
+            const modalElement = document.createElement('div');
+            modalElement.className = 'modal';
+            modalElement.setAttribute('role', 'dialog');
+            modalElement.setAttribute('aria-modal', 'true');
+            modalElement.setAttribute('aria-labelledby', 'event-details-title');
+
+            const modalContent = document.createElement('div');
+            modalContent.className = 'modal-content';
+            modalContent.setAttribute('role', 'document');
+
+            const header = document.createElement('div');
+            header.className = 'modal-header';
+            header.setAttribute('role', 'heading');
+            header.setAttribute('aria-level', '2');
+
+            const title = document.createElement('h2');
+            title.className = 'modal-title';
+            title.id = 'event-details-title';
+            title.textContent = normalizeText(details.title) || 'Event Details';
+
+            const closeBtn = document.createElement('span');
+            closeBtn.className = 'modal-close';
+            closeBtn.setAttribute('aria-label', 'Close modal');
+            closeBtn.setAttribute('data-action', 'close-modal');
+            closeBtn.textContent = '×';
+
+            header.appendChild(title);
+            header.appendChild(closeBtn);
+
+            const body = document.createElement('div');
+            body.className = 'modal-body';
+            body.setAttribute('role', 'document');
+
+            const detailsList = document.createElement('div');
+            detailsList.className = 'event-details-list';
+
+            const addDetailRow = (label, value) => {
+                const cleanedValue = normalizeText(value);
+                if (!cleanedValue) {
+                    return;
+                }
+                const row = document.createElement('div');
+                row.className = 'event-detail-row';
+                const labelEl = document.createElement('span');
+                labelEl.className = 'event-detail-label';
+                labelEl.textContent = label;
+                const valueEl = document.createElement('span');
+                valueEl.className = 'event-detail-value';
+                valueEl.textContent = cleanedValue;
+                row.appendChild(labelEl);
+                row.appendChild(valueEl);
+                detailsList.appendChild(row);
+            };
+
+            const timeParts = [];
+            if (normalizeText(details.date)) {
+                timeParts.push(details.date);
+            }
+            if (isAllDay) {
+                timeParts.push('All day');
+            } else if (normalizeText(details.time)) {
+                const timeRange = normalizeText(details.endTime)
+                    ? `${details.time} - ${details.endTime}`
+                    : details.time;
+                timeParts.push(timeRange);
+            }
+            addDetailRow('When', timeParts.join(' • '));
+            addDetailRow('Location', details.location);
+            addDetailRow('Owner', details.owner);
+            addDetailRow('Attendees', details.guests);
+            addDetailRow('Reminders', details.reminders);
+            addDetailRow('Visibility', details.visibility);
+            addDetailRow('Calendar', details.calendarId);
+            const sourceValue = normalizeText(details.source);
+            if (sourceValue && sourceValue.toLowerCase() !== 'google') {
+                addDetailRow('Source', sourceValue);
+            }
+            addDetailRow('Color', details.color);
+
+            if (descriptionText) {
+                const descriptionEl = document.createElement('div');
+                descriptionEl.className = 'event-detail-description';
+                descriptionEl.textContent = descriptionText;
+                detailsList.appendChild(descriptionEl);
+            }
+
+            body.appendChild(detailsList);
+
+            const footer = document.createElement('div');
+            footer.className = 'modal-footer';
+            const canDelete = normalizeText(details.eventId) &&
+                ['local', 'google'].includes(normalizeText(details.source).toLowerCase());
+            if (canDelete) {
+                const deleteButton = document.createElement('button');
+                deleteButton.type = 'button';
+                deleteButton.className = 'btn btn-danger';
+                deleteButton.textContent = 'Delete';
+                deleteButton.addEventListener('click', () => {
+                    if (!confirm('Delete this event?')) {
+                        return;
+                    }
+                    const normalizedCalendarId = normalizeText(details.calendarId) || null;
+                    fetch(`/api/calendar/events/${encodeURIComponent(details.eventId)}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            source: details.source,
+                            calendar_id: normalizedCalendarId,
+                        }),
+                    })
+                        .then(response => response.json().catch(() => ({})).then(data => ({ ok: response.ok, data })))
+                        .then(result => {
+                            if (!result.ok) {
+                                const message = result.data && result.data.error ? result.data.error : 'Failed to delete event';
+                                if (window.toast && window.toast.error) {
+                                    window.toast.error(message);
+                                } else {
+                                    alert(message);
+                                }
+                                return;
+                            }
+                            modalElement.classList.remove('show');
+                            setTimeout(() => {
+                                modalElement.remove();
+                            }, 300);
+                            if (details.eventId) {
+                                document.querySelectorAll(`[data-event-id="${details.eventId}"]`).forEach(chip => {
+                                    const wrapper = chip.closest('.event-chip-wrapper');
+                                    if (wrapper) {
+                                        wrapper.remove();
+                                    } else {
+                                        chip.remove();
+                                    }
+                                });
+                            }
+                            if (window.htmx) {
+                                htmx.ajax('GET', '/partials/calendar/week', { target: '#calendar-container' });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error deleting event:', error);
+                            if (window.toast && window.toast.error) {
+                                window.toast.error('Failed to delete event');
+                            } else {
+                                alert('Failed to delete event');
+                            }
+                        });
+                });
+                footer.appendChild(deleteButton);
+            }
+            const closeButton = document.createElement('button');
+            closeButton.type = 'button';
+            closeButton.className = 'btn';
+            closeButton.setAttribute('data-action', 'close-modal');
+            closeButton.textContent = 'Close';
+            footer.appendChild(closeButton);
+
+            modalContent.appendChild(header);
+            modalContent.appendChild(body);
+            modalContent.appendChild(footer);
+
+            modalElement.appendChild(modalContent);
+            document.body.appendChild(modalElement);
+
+            setTimeout(() => {
+                modalElement.classList.add('show');
+            }, 10);
+        }
+
+        document.addEventListener('click', function (event) {
+            const chip = event.target.closest('.event-chip');
+            if (!chip) {
+                return;
+            }
+
+            const details = {
+                eventId: chip.dataset.eventId,
+                title: chip.dataset.eventTitle,
+                date: chip.dataset.eventDate,
+                time: chip.dataset.eventTime,
+                endTime: chip.dataset.eventEndTime,
+                allDay: chip.dataset.eventAllDay === 'true',
+                location: chip.dataset.eventLocation,
+                description: chip.dataset.eventDescription,
+                owner: chip.dataset.eventOwner,
+                guests: chip.dataset.eventGuests,
+                reminders: chip.dataset.eventReminders,
+                source: chip.dataset.eventSource,
+                calendarId: chip.dataset.eventCalendarId,
+                visibility: chip.dataset.eventVisibility,
+                color: chip.dataset.eventColor,
+            };
+
+            showEventDetailsModal(details);
+        });
+
+        function initCastingModal(modalElement) {
+            if (!modalElement) {
+                return;
+            }
+
+            const panel = modalElement.querySelector('#casting-panel');
+            const devicesListEl = modalElement.querySelector('#casting-devices-list');
+            const discoverBtn = modalElement.querySelector('[data-action="casting-discover"]');
+
+            if (!panel || !devicesListEl) {
+                return;
+            }
+
+            const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => {
+                switch (char) {
+                    case '&': return '&amp;';
+                    case '<': return '&lt;';
+                    case '>': return '&gt;';
+                    case '"': return '&quot;';
+                    case "'": return '&#39;';
+                    default: return char;
+                }
+            });
+
+            const showMessage = (message, type) => {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = `alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show`;
+                alertDiv.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                panel.prepend(alertDiv);
+                setTimeout(() => alertDiv.remove(), 5000);
+            };
+
+            const getCurrentMediaUrl = () => window.currentMediaUrl || 'https://example.com/sample.mp4';
+
+            const renderDevices = (devices) => {
+                if (!devices.length) {
+                    devicesListEl.innerHTML = '<p class="text-muted">No casting devices found. Click "Discover Devices" to search the network.</p>';
+                    return;
+                }
+
+                const items = devices.map((device) => {
+                    const name = escapeHtml(device.friendly_name || device.name || 'Unnamed device');
+                    const deviceType = escapeHtml(device.device_type || 'Unknown');
+                    const deviceId = escapeHtml(device.device_id || '');
+                    return `
+                        <li class="list-group-item p-0">
+                            <button type="button"
+                                    class="casting-device-option"
+                                    data-casting-pick="true"
+                                    data-device-id="${deviceId}">
+                                <span class="casting-device-option-name">${name}</span>
+                                <span class="casting-device-option-type">${deviceType}</span>
+                            </button>
+                        </li>
+                    `;
+                }).join('');
+
+                devicesListEl.innerHTML = `<ul class="list-group">${items}</ul>`;
+            };
+
+            const refreshCastingDevices = () => {
+                fetch('/api/casting/devices')
+                    .then((response) => response.json())
+                    .then((devices) => renderDevices(devices || []))
+                    .catch((error) => {
+                        console.error('Error fetching casting devices:', error);
+                        devicesListEl.innerHTML = '<p class="text-danger">Unable to load devices.</p>';
+                    });
+            };
+
+            const controlDevice = (deviceId) => {
+                if (!deviceId) {
+                    return;
+                }
+
+                fetch(`/api/casting/devices/${encodeURIComponent(deviceId)}/play`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ media_url: getCurrentMediaUrl() }),
+                })
+                    .then((response) => response.json())
+                    .then((data) => {
+                        if (data.status === 'success') {
+                            showMessage(`Casting to selected device: ${data.message}`, 'success');
+                        } else {
+                            showMessage(`Casting failed: ${data.message || 'Unknown error'}`, 'error');
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('Error controlling device:', error);
+                        showMessage('Error starting cast', 'error');
+                    });
+            };
+
+            if (discoverBtn) {
+                discoverBtn.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    refreshCastingDevices();
+                });
+            }
+
+            devicesListEl.addEventListener('click', (event) => {
+                const optionBtn = event.target.closest('[data-casting-pick]');
+                if (!optionBtn) {
+                    return;
+                }
+                const deviceId = optionBtn.getAttribute('data-device-id');
+                controlDevice(deviceId);
+            });
+
+            refreshCastingDevices();
+        }
+
+        function initKitchenReferenceModal(modalElement) {
+            if (!modalElement) {
+                return;
+            }
+
+            const unitToMl = {
+                ounces: 29.5735,
+                cups: 236.588,
+                tablespoons: 14.7868,
+                teaspoons: 4.92892,
+                milliliters: 1,
+                liters: 1000,
+                pints: 473.176,
+                quarts: 946.353,
+            };
+
+            const selects = {
+                left: modalElement.querySelector('[data-converter="select-left"]'),
+                right: modalElement.querySelector('[data-converter="select-right"]'),
+            };
+
+            const inputs = {
+                left: modalElement.querySelector('[data-converter="input-left"]'),
+                right: modalElement.querySelector('[data-converter="input-right"]'),
+            };
+
+            if (!selects.left || !selects.right || !inputs.left || !inputs.right) {
+                return;
+            }
+
+            let lastEdited = 'left';
+
+            const toMl = (value, unit) => {
+                const factor = unitToMl[unit];
+                if (!Number.isFinite(value) || !factor) {
+                    return null;
+                }
+                return value * factor;
+            };
+
+            const formatValue = (value) => {
+                if (!Number.isFinite(value)) {
+                    return '';
+                }
+                if (value === 0) {
+                    return '0';
+                }
+                const absVal = Math.abs(value);
+                const fixed = absVal >= 10 ? value.toFixed(2) : value.toFixed(3);
+                return parseFloat(fixed).toString();
+            };
+
+            const syncDisabledOptions = () => {
+                const leftVal = selects.left.value;
+                const rightVal = selects.right.value;
+                const apply = (select, otherVal) => {
+                    Array.from(select.options).forEach((opt) => {
+                        opt.disabled = opt.value === otherVal;
+                    });
+                };
+                apply(selects.left, rightVal);
+                apply(selects.right, leftVal);
+            };
+
+            const updateOpposite = (source) => {
+                const fromInput = inputs[source];
+                const targetKey = source === 'left' ? 'right' : 'left';
+                const toInput = inputs[targetKey];
+                const fromUnit = selects[source].value;
+                const toUnit = selects[targetKey].value;
+                const amount = parseFloat(fromInput.value);
+
+                const mlValue = toMl(amount, fromUnit);
+                if (mlValue === null) {
+                    toInput.value = '';
+                    return;
+                }
+
+                const toFactor = unitToMl[toUnit];
+                if (!toFactor) {
+                    toInput.value = '';
+                    return;
+                }
+
+                const converted = mlValue / toFactor;
+                toInput.value = formatValue(converted);
+            };
+
+            const syncFromLast = () => {
+                if (lastEdited === 'right') {
+                    updateOpposite('right');
+                } else {
+                    updateOpposite('left');
+                }
+            };
+
+            inputs.left.addEventListener('input', () => {
+                lastEdited = 'left';
+                updateOpposite('left');
+            });
+
+            inputs.right.addEventListener('input', () => {
+                lastEdited = 'right';
+                updateOpposite('right');
+            });
+
+            selects.left.addEventListener('change', () => {
+                syncDisabledOptions();
+                syncFromLast();
+            });
+
+            selects.right.addEventListener('change', () => {
+                syncDisabledOptions();
+                syncFromLast();
+            });
+
+            syncDisabledOptions();
+            updateOpposite('left');
+        }
+
+        function refreshNotesCount() {
+            const list = document.getElementById('notes-list-modal');
+            const countElement = document.getElementById('notes-count');
+
+            if (!list || !countElement) {
+                return;
+            }
+
+            const items = list.querySelectorAll('li:not([data-empty-state])');
+            countElement.textContent = `(${items.length})`;
+
+            if (items.length === 0) {
+                if (!list.querySelector('[data-empty-state="notes"]')) {
+                    const empty = document.createElement('li');
+                    empty.className = 'list-group-item';
+                    empty.setAttribute('data-empty-state', 'notes');
+                    empty.setAttribute('role', 'listitem');
+                    empty.setAttribute('aria-label', 'No notes available');
+                    empty.textContent = 'No notes yet';
+                    list.appendChild(empty);
+                }
+            } else {
+                const emptyState = list.querySelector('[data-empty-state="notes"]');
+                if (emptyState) {
+                    emptyState.remove();
+                }
+            }
+
+            if (typeof requestSidebarBadgeRefresh === 'function') {
+                requestSidebarBadgeRefresh();
+            }
+        }
+
+        function refreshShoppingCount() {
+            const list = document.getElementById('shopping-list-modal');
+            const countElement = document.getElementById('shopping-count');
+
+            if (!list || !countElement) {
+                return;
+            }
+
+            const items = list.querySelectorAll('li.shopping-modal-item:not(.done):not([data-empty-state])');
+            countElement.textContent = `(${items.length} active)`;
+
+            if (typeof requestSidebarBadgeRefresh === 'function') {
+                requestSidebarBadgeRefresh();
+            }
+        }
+
+        function refreshTimersCount() {
+            const list = document.getElementById('timers-list-modal');
+            const countElement = document.getElementById('timers-count');
+
+            if (!list || !countElement) {
+                return;
+            }
+
+            const items = list.querySelectorAll('li:not([data-empty-state])');
+            countElement.textContent = `(${items.length} active)`;
+
+            if (items.length === 0) {
+                if (!list.querySelector('[data-empty-state="timers"]')) {
+                    const empty = document.createElement('li');
+                    empty.className = 'list-group-item';
+                    empty.setAttribute('data-empty-state', 'timers');
+                    empty.setAttribute('role', 'listitem');
+                    empty.setAttribute('aria-label', 'No active timers available');
+                    empty.textContent = 'No active timers';
+                    list.appendChild(empty);
+                }
+            } else {
+                const emptyState = list.querySelector('[data-empty-state="timers"]');
+                if (emptyState) {
+                    emptyState.remove();
+                }
+            }
+
+            if (typeof requestSidebarBadgeRefresh === 'function') {
+                requestSidebarBadgeRefresh();
+            }
+        }
+
+        // Function to edit a note in the modal
+        function editNoteModal(noteId, currentText) {
+            const newText = prompt('Edit your note:', currentText);
+            if (newText !== null) {
+                fetch(`/api/notes/${noteId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: newText
+                    })
+                })
+                    .then(response => response.json())
+                    .then(note => {
+                        const noteElement = document.getElementById(`note-modal-${noteId}`);
+                        if (noteElement) {
+                            noteElement.querySelector('.note-content').textContent = note.text;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error editing note:', error);
+                    });
+            }
+        }
+
+        // Function to delete a note in the modal
+        function deleteNoteModal(noteId) {
+            if (confirm('Are you sure you want to delete this note?')) {
+                fetch(`/api/notes/${noteId}`, {
+                    method: 'DELETE'
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            const noteElement = document.getElementById(`note-modal-${noteId}`);
+                            if (noteElement) {
+                                noteElement.remove();
+                            }
+
+                            if (typeof refreshNotesCount === 'function') {
+                                refreshNotesCount();
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting note:', error);
+                    });
+            }
+        }
+
+        // Function to add a shopping item in the modal
+        function addShoppingItemModal() {
+            const itemInput = document.getElementById('add-shopping-item-modal');
+            const quantityInput = document.getElementById('add-shopping-quantity-modal');
+
+            const item = itemInput.value.trim();
+            const quantity = quantityInput.value ? parseInt(quantityInput.value) : 1;
+
+            if (item) {
+                // Use fetch to post the shopping item
+                fetch('/api/shopping', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: item,  // API expects 'text' not 'item'
+                        qty: quantity  // API expects 'qty' not 'quantity'
+                    })
+                })
+                    .then(response => response.json())
+                    .then(shoppingItem => {
+                        // Add the shopping item to the modal list
+                        const shoppingList = document.getElementById('shopping-list-modal');
+                        if (shoppingList) {
+                            // Create new shopping item element
+                            const shoppingElement = document.createElement('li');
+                            shoppingElement.className = 'list-group-item shopping-modal-item';
+                            shoppingElement.id = `item-modal-${shoppingItem.id}`;
+                            shoppingElement.role = 'listitem';
+                            shoppingElement.setAttribute('aria-label', `Shopping item: ${shoppingItem.text}, quantity: ${shoppingItem.qty || 1}`);
+                            shoppingElement.innerHTML = `
+                            <div class="shopping-modal-row">
+                                <div class="shopping-modal-main">
+                                    <input type="checkbox" 
+                                           id="checkbox-modal-${shoppingItem.id}"
+                                           class="shopping-checkbox" 
+                                           ${(shoppingItem.done || shoppingItem.completed) ? 'checked' : ''} 
+                                           onchange="toggleShoppingItemModal(${shoppingItem.id}, this.checked)"
+                                           aria-label="Mark ${shoppingItem.text} as ${(shoppingItem.done || shoppingItem.completed) ? 'not completed' : 'completed'} in modal">
+                                    <label for="checkbox-modal-${shoppingItem.id}" class="shopping-text ${(shoppingItem.done || shoppingItem.completed) ? 'line-through' : ''}" aria-hidden="true">
+                                        ${shoppingItem.qty || 1} x ${shoppingItem.text}
+                                    </label>
+                                </div>
+                                <div class="shopping-actions" role="group" aria-label="Shopping item actions in modal">
+                                    <button class="btn btn-sm"
+                                            onclick="editShoppingItemModal(${shoppingItem.id}, '${shoppingItem.text}', ${shoppingItem.qty || 1})"
+                                            aria-label="Edit shopping item: ${shoppingItem.text} in modal">
+                                        <i class="icon icon-pencil" aria-hidden="true"></i>
+                                        <span class="sr-only">Edit</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger"
+                                            onclick="deleteShoppingItemModal(${shoppingItem.id})"
+                                            aria-label="Delete shopping item: ${shoppingItem.text} in modal">
+                                        <i class="icon icon-trash" aria-hidden="true"></i>
+                                        <span class="sr-only">Delete</span>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+
+                            // Add to the top of the list
+                            shoppingList.insertBefore(shoppingElement, shoppingList.firstChild);
+
+                            // Update count
+                            // Clear inputs
+                            itemInput.value = '';
+                            quantityInput.value = '1';
+
+                            if (typeof refreshShoppingCount === 'function') {
+                                refreshShoppingCount();
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error adding shopping item:', error);
+                    });
+            }
+        }
+
+        // Function to toggle a shopping item in the modal
+        function toggleShoppingItemModal(itemId, completed) {
+            fetch(`/api/shopping/${itemId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    done: completed  // API expects 'done' not 'completed'
+                })
+            })
+                .then(response => response.json())
+                .then(item => {
+                    const itemElement = document.getElementById(`item-modal-${itemId}`);
+                    if (itemElement) {
+                        const itemText = itemElement.querySelector('.shopping-text');
+                        if (itemText) {
+                            if (completed) {
+                                itemText.className = 'shopping-text line-through';
+                            } else {
+                                itemText.className = 'shopping-text';
+                            }
+                        }
+                        itemElement.classList.toggle('done', completed);
+                    }
+
+                    if (typeof refreshShoppingCount === 'function') {
+                        refreshShoppingCount();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error toggling shopping item:', error);
+                });
+        }
+
+        // Function to edit a shopping item in the modal
+        function editShoppingItemModal(itemId, currentItem, currentQuantity) {
+            const newItem = prompt('Edit item name:', currentItem);
+            if (newItem !== null) {
+                const newQuantity = prompt('Edit quantity:', currentQuantity.toString());
+                if (newQuantity !== null) {
+                    fetch(`/api/shopping/${itemId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            text: newItem,  // API expects 'text' not 'item'
+                            qty: parseInt(newQuantity)  // API expects 'qty' not 'quantity'
+                        })
+                    })
+                        .then(response => response.json())
+                        .then(item => {
+                            const itemElement = document.getElementById(`item-modal-${itemId}`);
+                            if (itemElement) {
+                                // Update both the display and the aria-label
+                                itemElement.setAttribute('aria-label', `Shopping item: ${item.text}, quantity: ${item.qty || 1}`);
+                                const itemText = itemElement.querySelector('.shopping-text');
+                                if (itemText) {
+                                    itemText.textContent = `${item.qty || 1} x ${item.text}`;
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error editing shopping item:', error);
+                        });
+                }
+            }
+        }
+
+        // Function to delete a shopping item in the modal
+        function deleteShoppingItemModal(itemId) {
+            if (confirm('Are you sure you want to delete this shopping item?')) {
+                fetch(`/api/shopping/${itemId}`, {
+                    method: 'DELETE'
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            const itemElement = document.getElementById(`item-modal-${itemId}`);
+                            if (itemElement) {
+                                itemElement.remove();
+
+                                if (typeof refreshShoppingCount === 'function') {
+                                    refreshShoppingCount();
+                                }
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting shopping item:', error);
+                    });
+            }
+        }
+
+        // Function to add a timer from the modal
+        function addTimerModal(minutes, label = '') {
+            const durationMinutes = Number(minutes);
+            const hasValidMinutes = Number.isFinite(durationMinutes) && durationMinutes > 0;
+            const trimmedLabel = (label && label.trim()) ? label.trim() : '';
+
+            const payload = {
+                label: trimmedLabel || (hasValidMinutes ? `${durationMinutes} min timer` : 'Timer')
+            };
+
+            if (hasValidMinutes) {
+                payload.minutes = durationMinutes;
+            }
+
+            fetch('/api/timers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            })
+                .then(response => response.json())
+                .then(timer => {
+                    if (!timer || timer.error) {
+                        console.error('Error adding timer:', timer && timer.error);
+                        return;
+                    }
+
+                    const timersList = document.getElementById('timers-list-modal');
+                    if (!timersList) {
+                        return;
+                    }
+
+                    const effectiveSeconds = typeof timer.time_remaining === 'number'
+                        ? timer.time_remaining
+                        : (hasValidMinutes ? durationMinutes * 60 : 0);
+
+                    timer.time_remaining = effectiveSeconds;
+
+                    const emptyState = timersList.querySelector('[data-empty-state="timers"]');
+                    if (emptyState) {
+                        emptyState.remove();
+                    }
+
+                    const initialMinutes = Math.floor(effectiveSeconds / 60);
+                    const initialSeconds = effectiveSeconds % 60;
+                    const timeString = `${initialMinutes}:${initialSeconds.toString().padStart(2, '0')}`;
+
+                    const timerElement = document.createElement('li');
+                    timerElement.className = 'list-group-item timer-modal-item';
+                    timerElement.id = `timer-modal-${timer.id}`;
+                    timerElement.role = 'listitem';
+                    timerElement.setAttribute('aria-label', `Timer: ${timer.label}, ${effectiveSeconds} seconds remaining`);
+                    timerElement.innerHTML = `
+                    <div class="timer-label" aria-label="Timer name">${timer.label}</div>
+                    <div class="timer-countdown" aria-label="Time remaining">${timeString}</div>
+                    <div class="timer-actions" role="group" aria-label="Timer actions in modal">
+                        <button class="btn btn-sm btn-danger"
+                                onclick="deleteTimerModal(${timer.id})"
+                                aria-label="Cancel timer: ${timer.label} in modal">
+                            Cancel
+                        </button>
+                    </div>
+                `;
+
+                    timersList.insertBefore(timerElement, timersList.firstChild);
+                    if (typeof refreshTimersCount === 'function') {
+                        refreshTimersCount();
+                    }
+
+                    if (typeof requestTimerUpdate === 'function') {
+                        requestTimerUpdate();
+                    } else if (typeof showFloatingTimer === 'function') {
+                        showFloatingTimer(timer);
+                    }
+
+                    if (typeof requestSidebarBadgeRefresh === 'function') {
+                        requestSidebarBadgeRefresh();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error adding timer:', error);
+                });
+        }
+
+        // Function to delete a timer in the modal
+        function deleteTimerModal(timerId) {
+            if (confirm('Are you sure you want to delete this timer?')) {
+                fetch(`/api/timers/${timerId}`, {
+                    method: 'DELETE'
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            const timerElement = document.getElementById(`timer-modal-${timerId}`);
+                            if (timerElement) {
+                                timerElement.remove();
+                            }
+
+                            if (typeof refreshTimersCount === 'function') {
+                                refreshTimersCount();
+                            }
+
+                            if (typeof requestTimerUpdate === 'function') {
+                                requestTimerUpdate();
+                            }
+
+                            if (typeof requestSidebarBadgeRefresh === 'function') {
+                                requestSidebarBadgeRefresh();
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting timer:', error);
+                    });
+            }
+        }
+
+        // Function to add a custom timer from the modal
+        function addCustomTimerModal() {
+            const minutesInput = document.getElementById('add-timer-minutes-modal');
+            const labelInput = document.getElementById('add-timer-label-modal');
+
+            const minutes = parseInt(minutesInput.value);
+            const label = labelInput.value.trim();
+
+            if (minutes > 0) {
+                addTimerModal(minutes, label);
+
+                // Clear inputs
+                minutesInput.value = '1';
+                labelInput.value = '';
+            } else {
+                alert('Please enter a valid number of minutes (greater than 0)');
+            }
+        }
+
+        // Add event listener for modal close buttons
+        document.addEventListener('click', function (event) {
+            // Handle modal close buttons
+            if (event.target.classList.contains('modal-close') ||
+                event.target.closest('[data-action="close-modal"]')) {
+                const modal = event.target.closest('.modal');
+                if (modal) {
+                    modal.classList.remove('show');
+                    // Remove the modal after the transition completes
+                    setTimeout(() => {
+                        modal.remove();
+                    }, 300);
+                }
+            }
+
+            // Handle clicks on modal backdrop to close the modal
+            if (event.target.classList.contains('modal') && event.target === event.currentTarget) {
+                event.target.classList.remove('show');
+                // Remove the modal after the transition completes
+                setTimeout(() => {
+                    event.target.remove();
+                }, 300);
+            }
+        });
+
+        // Handle Enter key to close modal
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                const modals = document.querySelectorAll('.modal.show');
+                if (modals.length > 0) {
+                    // Close the most recently added modal
+                    const modal = modals[modals.length - 1];
+                    modal.classList.remove('show');
+                    // Remove the modal after the transition completes
+                    setTimeout(() => {
+                        modal.remove();
+                    }, 300);
+                }
+            }
+        });
+        // Sidebar badge updates via HTMX
+        function updateSidebarBadges(json) {
+            try {
+                const counts = typeof json === 'string' ? JSON.parse(json) : json;
+                const types = ['notes', 'shopping', 'timers'];
+                types.forEach(type => {
+                    const badge = document.getElementById(`${type}-badge`);
+                    if (badge) {
+                        const count = counts[type] || 0;
+                        if (count > 0) {
+                            badge.textContent = count > 99 ? '99+' : count;
+                            badge.classList.remove('hidden');
+                            badge.style.display = 'flex';
+                        } else {
+                            badge.style.display = 'none';
+                            badge.classList.add('hidden');
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error('Error updating sidebar badges:', e);
+            }
+        }
+
+        let lastStatusMessages = {
+            system: null,
+            weather: null,
+            calendar: null
+        };
+
+        function showStatusToastIfChanged(kind, message, level) {
+            if (!message || lastStatusMessages[kind] === message || !window.toast) {
+                return;
+            }
+            lastStatusMessages[kind] = message;
+            if (level === 'success' && typeof window.toast.success === 'function') {
+                window.toast.success(message);
+                return;
+            }
+            if (typeof window.toast.info === 'function') {
+                window.toast.info(message);
+            }
+        }
+
+        function refreshStatusSummary(showToasts = true) {
+            return fetch('/api/status/summary', { cache: 'no-store' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.sidebar_counts) {
+                        updateSidebarBadges(data.sidebar_counts);
+                    }
+                    if (!showToasts || !data || !data.messages) {
+                        return;
+                    }
+                    showStatusToastIfChanged('system', data.messages.system, 'success');
+                    showStatusToastIfChanged('weather', data.messages.weather, 'info');
+                    showStatusToastIfChanged('calendar', data.messages.calendar, 'info');
+                })
+                .catch(e => console.error('Failed to refresh status summary:', e));
+        }
+
+        function requestSidebarBadgeRefresh() {
+            refreshStatusSummary(false);
+        }
+
+        // Initialize badges on load
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshStatusSummary(true);
+            setInterval(() => refreshStatusSummary(false), 60000);
+        });
+    </script>
+
+    <script>
+        (function () {
+            const defaults = {
+                enabled: false,
+                shift_enabled: true,
+                dim_enabled: true,
+                shift_interval_seconds: 180,
+                shift_range_px: 12,
+                dim_idle_seconds: 300,
+                dim_level: 0.6
+            };
+
+            let state = { ...defaults };
+            let shiftTimer = null;
+            let idleTimer = null;
+            let isDimmed = false;
+
+            const clampInt = (value, min, max, fallback) => {
+                const parsed = Number.parseInt(value, 10);
+                if (!Number.isFinite(parsed)) {
+                    return fallback;
+                }
+                return Math.max(min, Math.min(max, parsed));
+            };
+
+            const clampFloat = (value, min, max, fallback) => {
+                const parsed = Number.parseFloat(value);
+                if (!Number.isFinite(parsed)) {
+                    return fallback;
+                }
+                return Math.max(min, Math.min(max, parsed));
+            };
+
+            const normalize = (config) => {
+                const source = config || {};
+                return {
+                    enabled: Boolean(source.enabled),
+                    shift_enabled: source.shift_enabled !== false,
+                    dim_enabled: source.dim_enabled !== false,
+                    shift_interval_seconds: clampInt(source.shift_interval_seconds, 30, 1800, defaults.shift_interval_seconds),
+                    shift_range_px: clampInt(source.shift_range_px, 4, 40, defaults.shift_range_px),
+                    dim_idle_seconds: clampInt(source.dim_idle_seconds, 30, 3600, defaults.dim_idle_seconds),
+                    dim_level: clampFloat(source.dim_level, 0.3, 1.0, defaults.dim_level)
+                };
+            };
+
+            const setShift = (x, y) => {
+                document.documentElement.style.setProperty('--burn-shift-x', `${x}px`);
+                document.documentElement.style.setProperty('--burn-shift-y', `${y}px`);
+            };
+
+            const applyShift = () => {
+                if (!state.enabled || !state.shift_enabled) {
+                    setShift(0, 0);
+                    return;
+                }
+                const range = Math.max(0, state.shift_range_px);
+                const x = Math.round((Math.random() * (range * 2)) - range);
+                const y = Math.round((Math.random() * (range * 2)) - range);
+                setShift(x, y);
+            };
+
+            const setDimmed = (dimmed) => {
+                isDimmed = dimmed;
+                document.body.classList.toggle('burn-in-dimmed', dimmed);
+                if (dimmed) {
+                    document.documentElement.style.setProperty('--burn-dim-level', state.dim_level);
+                }
+            };
+
+            const scheduleDim = () => {
+                if (idleTimer) {
+                    clearTimeout(idleTimer);
+                    idleTimer = null;
+                }
+                if (!state.enabled || !state.dim_enabled) {
+                    setDimmed(false);
+                    return;
+                }
+                idleTimer = setTimeout(() => setDimmed(true), state.dim_idle_seconds * 1000);
+            };
+
+            const startShift = () => {
+                if (shiftTimer) {
+                    clearInterval(shiftTimer);
+                    shiftTimer = null;
+                }
+                if (!state.enabled || !state.shift_enabled) {
+                    setShift(0, 0);
+                    return;
+                }
+                applyShift();
+                shiftTimer = setInterval(applyShift, state.shift_interval_seconds * 1000);
+            };
+
+            const handleActivity = () => {
+                if (!state.enabled || !state.dim_enabled) {
+                    return;
+                }
+                if (isDimmed) {
+                    setDimmed(false);
+                }
+                scheduleDim();
+            };
+
+            const updateConfig = (config) => {
+                state = normalize(config);
+                startShift();
+                scheduleDim();
+            };
+
+            window.updateBurnInConfig = (config) => {
+                const merged = { ...state, ...(config || {}) };
+                updateConfig(merged);
+                if (window.APP_CONFIG && window.APP_CONFIG.ui) {
+                    window.APP_CONFIG.ui.burn_in = merged;
+                }
+            };
+
+            const init = () => {
+                const config = window.APP_CONFIG && window.APP_CONFIG.ui ? window.APP_CONFIG.ui.burn_in : null;
+                updateConfig(config || {});
+                const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'pointerdown', 'wheel'];
+                activityEvents.forEach(eventName => {
+                    document.addEventListener(eventName, handleActivity, { passive: true });
+                });
+                document.addEventListener('visibilitychange', () => {
+                    if (document.hidden) {
+                        if (shiftTimer) {
+                            clearInterval(shiftTimer);
+                            shiftTimer = null;
+                        }
+                        if (idleTimer) {
+                            clearTimeout(idleTimer);
+                            idleTimer = null;
+                        }
+                        setDimmed(false);
+                        setShift(0, 0);
+                    } else {
+                        startShift();
+                        scheduleDim();
+                    }
+                });
+            };
+
+            document.addEventListener('DOMContentLoaded', init);
+        })();
+    </script>
+
+    <script>
+        // Equalise all app-bar buttons to the width of the widest one
+        document.addEventListener('DOMContentLoaded', function () {
+            var btns = document.querySelectorAll('.app-bar-btn');
+            if (!btns.length) return;
+            btns.forEach(function (b) { b.style.minWidth = ''; });
+            var maxW = 0;
+            btns.forEach(function (b) { maxW = Math.max(maxW, b.offsetWidth); });
+            btns.forEach(function (b) { b.style.minWidth = maxW + 'px'; });
+        });
+    </script>
+
+    <!-- Hidden element retained for manual sidebar count refresh events -->
+    <div hx-get="/api/status/summary"
+         hx-trigger="refreshSidebarCounts from:body"
+         hx-swap="none"
+         hx-on:htmx:after-request="if(event.detail.successful){try{const data=JSON.parse(event.detail.xhr.responseText); if(data.sidebar_counts){updateSidebarBadges(data.sidebar_counts);}}catch(e){console.error('Failed sidebar count event parse:', e);}}">
+    </div>
+
+    <script>
+        // Quick timer: POST to /api/timers to create a named timer
+        function startQuickTimer(minutes) {
+            if (!minutes || isNaN(minutes) || minutes <= 0) return;
+            fetch('/api/timers', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({label: minutes + ' min timer', minutes: minutes})
+            }).then(function(r) {
+                if (r.ok) {
+                    // Clear custom input if used
+                    var inp = document.getElementById('quick-timer-custom-input');
+                    if (inp) inp.value = '';
+                    // Open timers modal so user sees the new timer
+                    loadAndShowModal('/partials/timers-modal');
+                }
+            }).catch(function(e) { console.error('startQuickTimer error', e); });
+        }
+
+        // Commute / Quick-timer tile: show quick-timer preset when commute tile is hidden
+        document.addEventListener('DOMContentLoaded', function() {
+            function syncTileRight() {
+                var commute = document.querySelector('#commute-tile-inner .commute-tile');
+                var fallback = document.getElementById('quick-timer-fallback');
+                var label = document.getElementById('tile-right-label');
+                if (!fallback) return;
+                var commuteActive = commute && commute.getAttribute('data-active') !== 'false';
+                fallback.style.display = commuteActive ? 'none' : 'flex';
+                fallback.style.flexDirection = commuteActive ? '' : 'column';
+                if (label) label.textContent = commuteActive ? 'Commute' : 'Quick Timer';
+            }
+            // Check shortly after load, after swaps, and observe for commute tile data-active changes
+            setTimeout(syncTileRight, 150);
+            var observer = new MutationObserver(syncTileRight);
+            var inner = document.getElementById('commute-tile-inner');
+            if (inner) observer.observe(inner, {childList: true, subtree: true, attributes: true, attributeFilter: ['data-active']});
+            document.addEventListener('htmx:afterSwap', function(event) {
+                if (event.target && (event.target.id === 'commute-tile-inner' || event.target.closest && event.target.closest('#commute-tile-inner'))) {
+                    setTimeout(syncTileRight, 50);
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
