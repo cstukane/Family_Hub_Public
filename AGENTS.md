@@ -85,3 +85,6 @@ Tests live in `tests/` (integration/unit) and `hub/tests/` (unit). Pytest is con
 
 ### Deployment
 `systemd/` contains service templates for the Flask app and Chromium kiosk browser. `make deploy` generates and installs them. Production secrets go in `instance/secrets.env`.
+
+## Testing and GitHub Actions
+Run tests, lint, type checks, coverage, and browser checks locally before opening or updating a pull request. Reserve GitHub Actions for release packaging, production deployment, and operational automation.
